@@ -3,11 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Claude 数据查看器 v4.1</title>
+<title>Claude 数据查看器 v4.0</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
 <style>
 /* ── TOKENS ── */
 :root {
@@ -245,7 +243,7 @@ code.tag{background:var(--pl);color:var(--pd);padding:1px 7px;border-radius:4px;
 #vc{position:relative}
 
 /* Messages */
-.msg-wrap{padding:10px 14px;margin-bottom:6px;display:flex}
+.msg-wrap{padding:5px 14px;display:flex}
 .msg-wrap.human{justify-content:flex-end}
 .msg-wrap.assistant{justify-content:flex-start}
 .msg-inner{max-width:82%}
@@ -257,19 +255,18 @@ code.tag{background:var(--pl);color:var(--pd);padding:1px 7px;border-radius:4px;
 .sender-label.assistant{color:#6B8F71}
 
 /* Thinking */
-.thinking-block{margin-bottom:12px;border-radius:12px;border:1px solid var(--bd);
-  background:var(--tag-bg);overflow:hidden;position:relative;z-index:1}
+.thinking-block{margin-bottom:6px;border-radius:12px;border:1px solid var(--bd);
+  background:var(--tag-bg);overflow:hidden}
 .thinking-toggle{display:flex;align-items:center;gap:7px;padding:7px 11px;
   cursor:pointer;font-size:11px;color:var(--t3);user-select:none;transition:background .12s}
 .thinking-toggle:hover{background:var(--sand)}
 .ti{font-size:9px;transition:transform .18s;display:inline-block}
 .thinking-toggle.open .ti{transform:rotate(90deg)}
 .thinking-sum{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-style:italic}
-.thinking-body{display:none;padding:12px 14px;border-top:1px solid var(--bd);
-  background:var(--bg);font-size:12px;color:var(--t2);line-height:1.7;
-  white-space:pre-wrap;font-style:italic;max-height:none;overflow-y:auto}
+.thinking-body{display:none;padding:9px 12px;border-top:1px solid var(--bd);
+  background:var(--bg);font-size:12px;color:var(--t2);line-height:1.65;
+  white-space:pre-wrap;font-style:italic;max-height:300px;overflow-y:auto}
 .thinking-body.open{display:block}
-.thinking-block + .bubble{margin-top:8px}
 
 /* Attachments */
 .att-block{margin-top:6px;border-radius:10px;border:1px solid var(--bd);
@@ -392,27 +389,6 @@ mark.hl.cur{background:var(--primary);color:#fff}
 .code-copy:hover{background:rgba(255,255,255,.2)}
 .code-copy.done{background:#6B8F71;color:#fff;border-color:#6B8F71;opacity:1}
 
-/* ── 消息操作栏 ── */
-.msg-actions{display:flex;gap:4px;margin-top:4px;opacity:0;transition:opacity .15s;
-  justify-content:flex-end}
-.msg-wrap:hover .msg-actions{opacity:1}
-.msg-wrap.human .msg-actions{justify-content:flex-end}
-.msg-wrap.assistant .msg-actions{justify-content:flex-start}
-
-.action-btn{background:var(--pl);border:1px solid var(--bd);color:var(--t3);
-  border-radius:6px;padding:3px 9px;font-size:11px;cursor:pointer;
-  font-family:var(--fb);transition:all .15s}
-.action-btn:hover{background:var(--sand);color:var(--t2)}
-.action-btn.done{background:#6B8F71;color:#fff;border-color:#6B8F71}
-
-/* ── 思考/附件操作栏 ── */
-.think-actions,.att-actions{display:flex;gap:4px;padding:4px 11px;
-  border-top:1px solid var(--bd);opacity:0;transition:opacity .15s}
-.thinking-block:hover .think-actions,
-.att-block:hover .att-actions{opacity:1}
-.think-actions{justify-content:flex-end}
-.att-actions{justify-content:flex-end}
-
 /* ── v4: HEATMAP ── */
 .heatmap-wrap{overflow-x:auto;padding-bottom:4px}
 .heatmap{display:flex;gap:3px}
@@ -467,7 +443,7 @@ mark.hl.cur{background:var(--primary);color:#fff}
   <div class="u-logo">🗂️</div>
   <div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px">
     <div class="u-title">Claude 数据查看器</div>
-    <div class="ver-badge">v4.1</div>
+    <div class="ver-badge">v4.0</div>
     <div class="u-sub">数据完全本地处理 · 不上传任何内容</div>
   </div>
   <div class="drop-zone" id="drop-zone">
@@ -477,7 +453,7 @@ mark.hl.cur{background:var(--primary);color:#fff}
     <label for="file-input" class="pick-btn" id="pick-label">选择文件</label>
     <input type="file" id="file-input" accept=".json,.zip,.md,.markdown" multiple>
   </div>
-  <div class="u-note">对话 · 项目 · 记忆 · 账户 · 统计 · 全局搜索 · 收藏标签 · 深色模式 · LaTeX公式 · 混合渲染</div>
+  <div class="u-note">对话 · 项目 · 记忆 · 账户 · 统计 · 全局搜索 · 收藏标签 · 深色模式</div>
 </div>
 
 <!-- MAIN -->
@@ -585,7 +561,7 @@ let filterFav=false,filterTag='';
 let dayFilter='';
 
 // VS
-const EST_H=150,SCAN=4;
+const EST_H=130,SCAN=4;
 let heights=[],offsets=[],totalH=0,rendered=new Map();
 // Search
 let srchQ='',srchHits=[],srchCur=-1;
@@ -599,7 +575,7 @@ let srchSidebarOpen=false;
 // ── INDEXEDDB ──────────────────────────────────────────
 function openDB(){
   return new Promise((res,rej)=>{
-    const req=indexedDB.open('claude_viewer_v41',1);
+    const req=indexedDB.open('claude_viewer_v4',1);
     req.onupgradeneeded=e=>{
       const db=e.target.result;
       if(!db.objectStoreNames.contains('store'))db.createObjectStore('store',{keyPath:'key'});
@@ -1390,83 +1366,8 @@ function openConv(uuid,callback){
   if(_openCallback)setTimeout(()=>{_openCallback();_openCallback=null;},150);
 }
 
-// ── v5: LATEX RENDERING ───────────────────────────────
-function renderLatex(container){
-  if(typeof katex==='undefined')return;
-  const walker=document.createTreeWalker(container,NodeFilter.SHOW_TEXT,{
-    acceptNode(node){
-      let p=node.parentNode;
-      while(p&&p!==container){
-        const tag=p.tagName;
-        if(tag==='CODE'||tag==='PRE'||(p.className&&String(p.className).indexOf('katex')>=0))
-          return NodeFilter.FILTER_REJECT;
-        p=p.parentNode;
-      }
-      return /(\$\$[\s\S]+?\$\$)|(\$[^$\n]+?\$)|(\\\([\s\S]+?\\\))|(\\\[[\s\S]+?\\\])/.test(node.textContent)
-        ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-    }
-  });
-  const targets=[];let n;
-  while((n=walker.nextNode()))targets.push(n);
-  targets.forEach(node=>{
-    const text=node.textContent;
-    const frag=document.createDocumentFragment();
-    const re=/(\$\$[\s\S]+?\$\$)|(\\\[[\s\S]+?\\\])|(\$[^$\n]+?\$)|(\\\([\s\S]+?\\\))/g;
-    let last=0,m;
-    while((m=re.exec(text))!==null){
-      if(m.index>last)frag.appendChild(document.createTextNode(text.slice(last,m.index)));
-      const raw=m[0];let tex,display;
-      if(raw.startsWith('$$')){tex=raw.slice(2,-2);display=true;}
-      else if(raw.startsWith('\\[')){tex=raw.slice(2,-2);display=true;}
-      else if(raw.startsWith('\\(')){tex=raw.slice(2,-2);display=false;}
-      else{tex=raw.slice(1,-1);display=false;}
-      const span=document.createElement('span');
-      try{katex.render(tex.trim(),span,{displayMode:display,throwOnError:false,errorColor:'#C4653A'});}
-      catch(e){span.textContent=raw;}
-      frag.appendChild(span);last=re.lastIndex;
-    }
-    if(last<text.length)frag.appendChild(document.createTextNode(text.slice(last)));
-    if(frag.childNodes.length)node.parentNode.replaceChild(frag,node);
-  });
-}
-
-// ── v5: UNSUPPORTED BLOCK HANDLER ─────────────────────
-function replaceUnsupportedBlocks(text){
-  if(!text)return text;
-  const placeholder='This block is not supported on your current device yet.';
-  if(text.indexOf(placeholder)===-1)return text;
-  text=text.replace(/```[a-zA-Z]*\s*\n?\s*This block is not supported on your current device yet\.\s*\n?```/g,
-    '\n> ⚠️ **此处原为公式或可视化组件** — Claude 导出数据未包含其源码，请在 Claude 网页版查看。\n');
-  text=text.split(placeholder).join('⚠️ 此处原为公式或可视化组件（导出数据未包含源码）');
-  return text;
-}
-
 // ── VIRTUAL SCROLL ─────────────────────────────────────
-const FULL_RENDER_THRESHOLD=500;
-let fullRenderMode=false;
-
 function initVS(){
-  fullRenderMode=curMsgs.length<=FULL_RENDER_THRESHOLD;
-  if(fullRenderMode) initFullRender();
-  else initVirtualScroll();
-}
-
-function initFullRender(){
-  rendered.clear();vc.innerHTML='';
-  vc.style.height='auto';vc.style.position='static';
-  const frag=document.createDocumentFragment();
-  for(let i=0;i<curMsgs.length;i++){
-    const node=buildMsg(curMsgs[i],i);
-    node.style.cssText='position:static';
-    frag.appendChild(node);
-    rendered.set(i,node);
-  }
-  vc.appendChild(frag);
-  if(srchQ)applyHL();
-}
-
-function initVirtualScroll(){
-  vc.style.position='relative';
   heights=new Array(curMsgs.length).fill(EST_H);
   offsets=new Array(curMsgs.length).fill(0);
   rendered.clear();vc.innerHTML='';
@@ -1489,7 +1390,6 @@ function getRange(){
   return[s,e];
 }
 function renderVisible(){
-  if(fullRenderMode)return;
   if(!curMsgs.length)return;
   const[s,e]=getRange();
   for(const[i,node]of rendered){if(i<s||i>e){node.remove();rendered.delete(i);}}
@@ -1537,25 +1437,12 @@ function buildMsg(msg,idx){
   // Thinking
   if(!isH)(msg.content||[]).filter(b=>b.type==='thinking').forEach(b=>inner.appendChild(buildThinking(b)));
   // Text bubble
-  let textContent=(msg.content||[]).filter(b=>b.type==='text').map(b=>b.text||'').join('\n').trim()||msg.text||'';
-  if(!isH)textContent=replaceUnsupportedBlocks(textContent);
+  const textContent=(msg.content||[]).filter(b=>b.type==='text').map(b=>b.text||'').join('\n').trim()||msg.text||'';
   if(textContent.trim()){
     const bubble=document.createElement('div');bubble.className='bubble '+(isH?'human':'assistant');
     if(isH)bubble.innerHTML=esc(textContent).replace(/\n/g,'<br>');
-    else try{bubble.innerHTML=marked.parse(textContent);enhanceCodeBlocks(bubble);renderLatex(bubble);}catch{bubble.textContent=textContent;}
+    else try{bubble.innerHTML=marked.parse(textContent);enhanceCodeBlocks(bubble);}catch{bubble.textContent=textContent;}
     inner.appendChild(bubble);
-    // 操作栏
-    const actions=document.createElement('div');actions.className='msg-actions';
-    const copyBtn=document.createElement('button');copyBtn.className='action-btn';copyBtn.textContent='📋 复制';
-    copyBtn.addEventListener('click',e=>{
-      e.stopPropagation();
-      navigator.clipboard.writeText(textContent).then(()=>{
-        copyBtn.textContent='✅ 已复制';copyBtn.classList.add('done');
-        setTimeout(()=>{copyBtn.textContent='📋 复制';copyBtn.classList.remove('done');},1500);
-      }).catch(()=>{copyBtn.textContent='❌ 失败';setTimeout(()=>copyBtn.textContent='📋 复制',1500);});
-    });
-    actions.appendChild(copyBtn);
-    inner.appendChild(actions);
   }
   // Attachments
   const atts=msg.attachments||[];
@@ -1605,40 +1492,9 @@ function buildThinking(b){
   const sumEl=document.createElement('span');sumEl.className='thinking-sum';
   if(sums)sumEl.textContent='— '+sums;
   toggle.appendChild(arrow);toggle.appendChild(label);toggle.appendChild(sumEl);
-  const body=document.createElement('div');body.className='thinking-body';
-  body.textContent=b.thinking||'';
-  // 操作栏
-  const actions=document.createElement('div');actions.className='think-actions';
-  const copyBtn=document.createElement('button');copyBtn.className='action-btn';copyBtn.textContent='📋 复制思考';
-  copyBtn.addEventListener('click',e=>{
-    e.stopPropagation();
-    navigator.clipboard.writeText(b.thinking||'').then(()=>{
-      copyBtn.textContent='✅ 已复制';copyBtn.classList.add('done');
-      setTimeout(()=>{copyBtn.textContent='📋 复制思考';copyBtn.classList.remove('done');},1500);
-    }).catch(()=>{copyBtn.textContent='❌ 失败';setTimeout(()=>copyBtn.textContent='📋 复制思考',1500);});
-  });
-  actions.appendChild(copyBtn);
-  toggle.addEventListener('click',()=>{
-    const o=body.classList.toggle('open');
-    toggle.classList.toggle('open',o);
-    // 通知虚拟滚动系统更新高度
-    requestAnimationFrame(()=>{
-      const msgWrap=wrap.closest('.msg-wrap');
-      if(msgWrap){
-        const idx=parseInt(msgWrap.dataset.idx);
-        if(!isNaN(idx)&&heights[idx]!==undefined){
-          const newH=msgWrap.offsetHeight;
-          if(newH>0&&newH!==heights[idx]){
-            heights[idx]=newH;
-            recomputeOffsets();
-            vc.style.height=totalH+'px';
-            for(const[j,n]of rendered)n.style.top=offsets[j]+'px';
-          }
-        }
-      }
-    });
-  });
-  wrap.appendChild(toggle);wrap.appendChild(body);wrap.appendChild(actions);return wrap;
+  const body=document.createElement('div');body.className='thinking-body';body.textContent=b.thinking||'';
+  toggle.addEventListener('click',()=>{const o=body.classList.toggle('open');toggle.classList.toggle('open',o);});
+  wrap.appendChild(toggle);wrap.appendChild(body);return wrap;
 }
 
 function buildAttachment(a){
@@ -1657,18 +1513,7 @@ function buildAttachment(a){
     const ti=document.createElement('span');ti.className='ti';ti.style.cssText='font-size:9px;margin-right:4px';ti.textContent='▶';
     hdr.insertBefore(ti,icon);
     hdr.addEventListener('click',()=>{const o=body.classList.toggle('open');ti.style.transform=o?'rotate(90deg)':'';});
-    // 操作栏
-    const actions=document.createElement('div');actions.className='att-actions';
-    const copyBtn=document.createElement('button');copyBtn.className='action-btn';copyBtn.textContent='📋 复制内容';
-    copyBtn.addEventListener('click',e=>{
-      e.stopPropagation();
-      navigator.clipboard.writeText(a.extracted_content).then(()=>{
-        copyBtn.textContent='✅ 已复制';copyBtn.classList.add('done');
-        setTimeout(()=>{copyBtn.textContent='📋 复制内容';copyBtn.classList.remove('done');},1500);
-      }).catch(()=>{copyBtn.textContent='❌ 失败';setTimeout(()=>copyBtn.textContent='📋 复制内容',1500);});
-    });
-    actions.appendChild(copyBtn);
-    wrap.appendChild(hdr);wrap.appendChild(body);wrap.appendChild(actions);
+    wrap.appendChild(hdr);wrap.appendChild(body);
   } else {
     wrap.appendChild(hdr);
   }
@@ -1783,10 +1628,7 @@ $('exp-pdf').addEventListener('click',()=>{
   if(!curConv||!curMsgs.length)return;
   const title=curConv.name||'conversation';
   let html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${esc(title)}</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"><\/script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"><\/script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"><\/script>
   <style>body{font-family:system-ui,sans-serif;font-size:14px;line-height:1.7;max-width:800px;margin:0 auto;padding:32px;color:#1a1a1a}
   h1{font-family:Georgia,serif;font-size:22px;margin-bottom:6px}.sub{color:#9c9590;font-size:12px;margin-bottom:32px}
   .msg{margin-bottom:20px;display:flex;flex-direction:column}.msg.human{align-items:flex-end}.msg.assistant{align-items:flex-start}
@@ -1821,19 +1663,7 @@ $('exp-pdf').addEventListener('click',()=>{
   const win=window.open('','_blank','width=900,height=700');
   if(!win){alert('请允许弹出窗口以导出PDF');return;}
   win.document.write(html);win.document.close();
-  win.addEventListener('load',()=>setTimeout(()=>{
-    try{if(win.renderMathInElement)win.renderMathInElement(win.document.body,{
-      delimiters:[
-        {left:'$$',right:'$$',display:true},
-        {left:'\\[',right:'\\]',display:true},
-        {left:'$',right:'$',display:false},
-        {left:'\\(',right:'\\)',display:false}
-      ],
-      throwOnError:false,
-      ignoredTags:['script','noscript','style','textarea','pre','code']
-    });}catch(e){}
-    setTimeout(()=>win.print(),400);
-  },500));
+  win.addEventListener('load',()=>setTimeout(()=>win.print(),300));
 });
 
 // ── EXPORT ALL (ZIP) ──────────────────────────────────
