@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Claude 数据查看器 v5.0</title>
+<title>Claude 数据查看器 v5.1</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
@@ -245,7 +245,7 @@ code.tag{background:var(--pl);color:var(--pd);padding:1px 7px;border-radius:4px;
 #vc{position:relative}
 
 /* Messages */
-.msg-wrap{padding:5px 14px;display:flex}
+.msg-wrap{padding:10px 14px;margin-bottom:6px;display:flex}
 .msg-wrap.human{justify-content:flex-end}
 .msg-wrap.assistant{justify-content:flex-start}
 .msg-inner{max-width:82%}
@@ -257,18 +257,19 @@ code.tag{background:var(--pl);color:var(--pd);padding:1px 7px;border-radius:4px;
 .sender-label.assistant{color:#6B8F71}
 
 /* Thinking */
-.thinking-block{margin-bottom:6px;border-radius:12px;border:1px solid var(--bd);
-  background:var(--tag-bg);overflow:hidden}
+.thinking-block{margin-bottom:12px;border-radius:12px;border:1px solid var(--bd);
+  background:var(--tag-bg);overflow:hidden;position:relative;z-index:1}
 .thinking-toggle{display:flex;align-items:center;gap:7px;padding:7px 11px;
   cursor:pointer;font-size:11px;color:var(--t3);user-select:none;transition:background .12s}
 .thinking-toggle:hover{background:var(--sand)}
 .ti{font-size:9px;transition:transform .18s;display:inline-block}
 .thinking-toggle.open .ti{transform:rotate(90deg)}
 .thinking-sum{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-style:italic}
-.thinking-body{display:none;padding:9px 12px;border-top:1px solid var(--bd);
-  background:var(--bg);font-size:12px;color:var(--t2);line-height:1.65;
-  white-space:pre-wrap;font-style:italic;max-height:300px;overflow-y:auto}
+.thinking-body{display:none;padding:12px 14px;border-top:1px solid var(--bd);
+  background:var(--bg);font-size:12px;color:var(--t2);line-height:1.7;
+  white-space:pre-wrap;font-style:italic;max-height:none;overflow-y:auto}
 .thinking-body.open{display:block}
+.thinking-block + .bubble{margin-top:8px}
 
 /* Attachments */
 .att-block{margin-top:6px;border-radius:10px;border:1px solid var(--bd);
@@ -391,6 +392,26 @@ mark.hl.cur{background:var(--primary);color:#fff}
 .code-copy:hover{background:rgba(255,255,255,.2)}
 .code-copy.done{background:#6B8F71;color:#fff;border-color:#6B8F71;opacity:1}
 
+/* ── v5.1: 消息操作栏 ── */
+.msg-actions{display:flex;gap:4px;margin-top:4px;opacity:0;transition:opacity .15s;
+  justify-content:flex-end}
+.msg-wrap:hover .msg-actions{opacity:1}
+.msg-wrap.human .msg-actions{justify-content:flex-end}
+.msg-wrap.assistant .msg-actions{justify-content:flex-start}
+
+.action-btn{background:var(--pl);border:1px solid var(--bd);color:var(--t3);
+  border-radius:6px;padding:3px 9px;font-size:11px;cursor:pointer;
+  font-family:var(--fb);transition:all .15s}
+.action-btn:hover{background:var(--sand);color:var(--t2)}
+.action-btn.done{background:#6B8F71;color:#fff;border-color:#6B8F71}
+
+/* ── v5.1: 思考/附件操作栏 ── */
+.think-actions,.att-actions{display:flex;gap:4px;padding:4px 11px;
+  border-top:1px solid var(--bd);opacity:0;transition:opacity .15s;
+  justify-content:flex-end}
+.thinking-block:hover .think-actions,
+.att-block:hover .att-actions{opacity:1}
+
 /* ── v4: HEATMAP ── */
 .heatmap-wrap{overflow-x:auto;padding-bottom:4px}
 .heatmap{display:flex;gap:3px}
@@ -445,7 +466,7 @@ mark.hl.cur{background:var(--primary);color:#fff}
   <div class="u-logo">🗂️</div>
   <div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px">
     <div class="u-title">Claude 数据查看器</div>
-    <div class="ver-badge">v5.0</div>
+    <div class="ver-badge">v5.1</div>
     <div class="u-sub">数据完全本地处理 · 不上传任何内容</div>
   </div>
   <div class="drop-zone" id="drop-zone">
@@ -455,7 +476,7 @@ mark.hl.cur{background:var(--primary);color:#fff}
     <label for="file-input" class="pick-btn" id="pick-label">选择文件</label>
     <input type="file" id="file-input" accept=".json,.zip,.md,.markdown" multiple>
   </div>
-  <div class="u-note">对话 · 项目 · 记忆 · 账户 · 统计 · 全局搜索 · 收藏标签 · 深色模式</div>
+  <div class="u-note">对话 · 项目 · 记忆 · 账户 · 统计 · 全局搜索 · 收藏标签 · 深色模式 · 一键复制</div>
 </div>
 
 <!-- MAIN -->
@@ -563,7 +584,7 @@ let filterFav=false,filterTag='';
 let dayFilter='';
 
 // VS
-const EST_H=130,SCAN=4;
+const EST_H=150,SCAN=4;
 const FULL_RENDER_THRESHOLD=500; // <= this many messages: render all at once (smoother + Ctrl+F); else virtual scroll
 let heights=[],offsets=[],totalH=0,rendered=new Map();
 let fullRenderMode=false;
@@ -1476,6 +1497,18 @@ function buildMsg(msg,idx){
     if(isH){bubble.innerHTML=esc(textContent).replace(/\n/g,'<br>');renderLatex(bubble);}
     else try{bubble.innerHTML=marked.parse(textContent);enhanceCodeBlocks(bubble);renderLatex(bubble);}catch{bubble.textContent=textContent;}
     inner.appendChild(bubble);
+    // v5.1: 复制按钮
+    const actions=document.createElement('div');actions.className='msg-actions';
+    const copyBtn=document.createElement('button');copyBtn.className='action-btn';copyBtn.textContent='📋 复制';
+    copyBtn.addEventListener('click',e=>{
+      e.stopPropagation();
+      navigator.clipboard.writeText(textContent).then(()=>{
+        copyBtn.textContent='✅ 已复制';copyBtn.classList.add('done');
+        setTimeout(()=>{copyBtn.textContent='📋 复制';copyBtn.classList.remove('done');},1500);
+      }).catch(()=>{copyBtn.textContent='❌ 失败';setTimeout(()=>copyBtn.textContent='📋 复制',1500);});
+    });
+    actions.appendChild(copyBtn);
+    inner.appendChild(actions);
   }
   // Attachments
   const atts=msg.attachments||[];
@@ -1582,8 +1615,33 @@ function buildThinking(b){
   if(sums)sumEl.textContent='— '+sums;
   toggle.appendChild(arrow);toggle.appendChild(label);toggle.appendChild(sumEl);
   const body=document.createElement('div');body.className='thinking-body';body.textContent=b.thinking||'';
-  toggle.addEventListener('click',()=>{const o=body.classList.toggle('open');toggle.classList.toggle('open',o);});
-  wrap.appendChild(toggle);wrap.appendChild(body);return wrap;
+  // v5.1: 复制思考按钮
+  const actions=document.createElement('div');actions.className='think-actions';
+  const copyBtn=document.createElement('button');copyBtn.className='action-btn';copyBtn.textContent='📋 复制思考';
+  copyBtn.addEventListener('click',e=>{
+    e.stopPropagation();
+    navigator.clipboard.writeText(b.thinking||'').then(()=>{
+      copyBtn.textContent='✅ 已复制';copyBtn.classList.add('done');
+      setTimeout(()=>{copyBtn.textContent='📋 复制思考';copyBtn.classList.remove('done');},1500);
+    }).catch(()=>{copyBtn.textContent='❌ 失败';setTimeout(()=>copyBtn.textContent='📋 复制思考',1500);});
+  });
+  actions.appendChild(copyBtn);
+  toggle.addEventListener('click',()=>{
+    const o=body.classList.toggle('open');toggle.classList.toggle('open',o);
+    // 展开/收起后通知虚拟滚动重算高度（仅虚拟滚动模式下需要）
+    if(!fullRenderMode)requestAnimationFrame(()=>{
+      const msgWrap=wrap.closest('.msg-wrap');
+      if(!msgWrap)return;
+      const i=parseInt(msgWrap.dataset.idx);
+      if(isNaN(i)||heights[i]===undefined)return;
+      const newH=msgWrap.offsetHeight;
+      if(newH>0&&newH!==heights[i]){
+        heights[i]=newH;recomputeOffsets();vc.style.height=totalH+'px';
+        for(const[j,n]of rendered)n.style.top=offsets[j]+'px';
+      }
+    });
+  });
+  wrap.appendChild(toggle);wrap.appendChild(body);wrap.appendChild(actions);return wrap;
 }
 
 function buildAttachment(a){
@@ -1602,7 +1660,18 @@ function buildAttachment(a){
     const ti=document.createElement('span');ti.className='ti';ti.style.cssText='font-size:9px;margin-right:4px';ti.textContent='▶';
     hdr.insertBefore(ti,icon);
     hdr.addEventListener('click',()=>{const o=body.classList.toggle('open');ti.style.transform=o?'rotate(90deg)':'';});
-    wrap.appendChild(hdr);wrap.appendChild(body);
+    // v5.1: 复制附件内容按钮
+    const actions=document.createElement('div');actions.className='att-actions';
+    const copyBtn=document.createElement('button');copyBtn.className='action-btn';copyBtn.textContent='📋 复制内容';
+    copyBtn.addEventListener('click',e=>{
+      e.stopPropagation();
+      navigator.clipboard.writeText(a.extracted_content).then(()=>{
+        copyBtn.textContent='✅ 已复制';copyBtn.classList.add('done');
+        setTimeout(()=>{copyBtn.textContent='📋 复制内容';copyBtn.classList.remove('done');},1500);
+      }).catch(()=>{copyBtn.textContent='❌ 失败';setTimeout(()=>copyBtn.textContent='📋 复制内容',1500);});
+    });
+    actions.appendChild(copyBtn);
+    wrap.appendChild(hdr);wrap.appendChild(body);wrap.appendChild(actions);
   } else {
     wrap.appendChild(hdr);
   }
