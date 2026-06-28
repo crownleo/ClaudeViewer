@@ -87,7 +87,7 @@
 4. 下载邮件中的 `.zip` 压缩包
 
 ### 第二步：打开查看器
-双击 `claude_viewer_v5.1.html`，在浏览器中打开。
+双击 `claude_viewer.html`，在浏览器中打开。
 
 > **推荐浏览器**：Chrome / Edge  
 > Safari 可正常查看对话，但 PDF 导出功能受限
