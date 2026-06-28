@@ -3,9 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Claude 数据查看器 v3.0</title>
+<title>Claude 数据查看器 v5.1</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
 <style>
 /* ── TOKENS ── */
 :root {
@@ -166,6 +168,9 @@ code.tag{background:var(--pl);color:var(--pd);padding:1px 7px;border-radius:4px;
 .stat-label{font-size:12px;color:var(--t3);margin-top:4px}
 .chart-wrap{background:var(--sur);border:1px solid var(--bd);border-radius:16px;
   padding:20px;margin-bottom:14px;box-shadow:0 1px 4px var(--sh);overflow-x:auto}
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.charts-row .chart-wrap{margin-bottom:0}
+@media(max-width:900px){.charts-row{grid-template-columns:1fr}}
 .chart-title{font-weight:600;font-size:14px;color:var(--t1);margin-bottom:16px}
 .top-convs{border-collapse:collapse;width:100%;font-size:13px}
 .top-convs th{text-align:left;padding:6px 10px;color:var(--t3);
@@ -215,22 +220,6 @@ code.tag{background:var(--pl);color:var(--pd);padding:1px 7px;border-radius:4px;
 .exp-btn:hover{border-color:var(--primary);color:var(--primary)}
 .exp-btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
 .exp-btn.primary:hover{background:var(--pd);border-color:var(--pd)}
-.branch-badge{background:#e8eef8;color:#4a5a8a;border:1px solid #c8d4e8;
-  padding:5px 11px;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer;
-  transition:all .15s}
-.branch-badge:hover{background:#d0daf0}
-
-/* Branch panel */
-#branch-panel{display:none;background:var(--bg);border-bottom:1px solid var(--bd);
-  padding:10px 14px;max-height:160px;overflow-y:auto;flex-shrink:0}
-.branch-panel-title{font-size:12px;font-weight:600;color:var(--t2);margin-bottom:8px}
-.branch-path{display:flex;align-items:center;gap:6px;font-size:12px;
-  padding:6px 10px;border-radius:8px;cursor:pointer;
-  border:1px solid var(--bd);background:var(--sur);margin-bottom:5px;transition:all .15s}
-.branch-path:hover{border-color:var(--primary)}
-.branch-path.active{border-color:var(--primary);background:var(--pl)}
-.branch-path-label{flex:1;color:var(--t2)}
-.branch-path-count{color:var(--t3);font-size:11px}
 
 /* Search bar */
 .search-bar{padding:8px 14px;background:var(--bg);
@@ -256,7 +245,7 @@ code.tag{background:var(--pl);color:var(--pd);padding:1px 7px;border-radius:4px;
 #vc{position:relative}
 
 /* Messages */
-.msg-wrap{padding:5px 14px;display:flex}
+.msg-wrap{padding:10px 14px;margin-bottom:6px;display:flex}
 .msg-wrap.human{justify-content:flex-end}
 .msg-wrap.assistant{justify-content:flex-start}
 .msg-inner{max-width:82%}
@@ -266,22 +255,21 @@ code.tag{background:var(--pl);color:var(--pd);padding:1px 7px;border-radius:4px;
 .sender-label{font-weight:600;text-transform:uppercase;letter-spacing:.05em;font-size:10px}
 .sender-label.human{color:var(--pd)}
 .sender-label.assistant{color:#6B8F71}
-.branch-ver{font-size:10px;background:#e8eef8;color:#4a5a8a;
-  padding:1px 6px;border-radius:9999px}
 
 /* Thinking */
-.thinking-block{margin-bottom:6px;border-radius:12px;border:1px solid var(--bd);
-  background:var(--tag-bg);overflow:hidden}
+.thinking-block{margin-bottom:12px;border-radius:12px;border:1px solid var(--bd);
+  background:var(--tag-bg);overflow:hidden;position:relative;z-index:1}
 .thinking-toggle{display:flex;align-items:center;gap:7px;padding:7px 11px;
   cursor:pointer;font-size:11px;color:var(--t3);user-select:none;transition:background .12s}
 .thinking-toggle:hover{background:var(--sand)}
 .ti{font-size:9px;transition:transform .18s;display:inline-block}
 .thinking-toggle.open .ti{transform:rotate(90deg)}
 .thinking-sum{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-style:italic}
-.thinking-body{display:none;padding:9px 12px;border-top:1px solid var(--bd);
-  background:var(--bg);font-size:12px;color:var(--t2);line-height:1.65;
-  white-space:pre-wrap;font-style:italic;max-height:300px;overflow-y:auto}
+.thinking-body{display:none;padding:12px 14px;border-top:1px solid var(--bd);
+  background:var(--bg);font-size:12px;color:var(--t2);line-height:1.7;
+  white-space:pre-wrap;font-style:italic;max-height:none;overflow-y:auto}
 .thinking-body.open{display:block}
+.thinking-block + .bubble{margin-top:8px}
 
 /* Attachments */
 .att-block{margin-top:6px;border-radius:10px;border:1px solid var(--bd);
@@ -354,10 +342,118 @@ mark.hl.cur{background:var(--primary);color:#fff}
 .progress-wrap{width:260px;height:6px;background:var(--sand);border-radius:3px;overflow:hidden}
 .progress-bar{height:100%;background:var(--primary);border-radius:3px;transition:width .2s}
 
+/* ── v4: SEARCH RESULT SIDEBAR ── */
+#detail-body{flex:1;display:flex;overflow:hidden;position:relative}
+.messages-vp{flex:1}
+#srch-sidebar{width:0;flex-shrink:0;background:var(--sur);border-left:1px solid var(--bd);
+  overflow:hidden;transition:width .2s;display:flex;flex-direction:column}
+#srch-sidebar.open{width:260px}
+.srch-sb-head{padding:9px 12px;border-bottom:1px solid var(--bd);
+  font-size:12px;font-weight:600;color:var(--t2);display:flex;
+  align-items:center;justify-content:space-between;flex-shrink:0}
+.srch-sb-close{background:none;border:none;cursor:pointer;color:var(--t3);font-size:14px}
+.srch-sb-list{flex:1;overflow-y:auto;padding:6px}
+.srch-sb-list::-webkit-scrollbar{width:4px}
+.srch-sb-list::-webkit-scrollbar-thumb{background:var(--sand);border-radius:3px}
+.srch-res{padding:8px 10px;border-radius:8px;margin-bottom:5px;cursor:pointer;
+  border:1px solid transparent;transition:all .12s;background:var(--bg)}
+.srch-res:hover{border-color:var(--pl)}
+.srch-res.active{border-color:var(--primary);background:var(--pl)}
+.srch-res-head{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+.srch-res-sender{font-size:10px;font-weight:600;text-transform:uppercase}
+.srch-res-sender.human{color:var(--pd)}
+.srch-res-sender.assistant{color:#6B8F71}
+.srch-res-idx{font-size:10px;color:var(--t3);margin-left:auto}
+.srch-res-snip{font-size:12px;color:var(--t2);line-height:1.45;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.srch-res-snip mark{background:#ffe566;color:var(--t1);padding:0 1px;border-radius:2px}
+.srch-toggle-btn{background:var(--sur);border:1px solid var(--bd);border-radius:8px;
+  padding:7px 10px;color:var(--t2);cursor:pointer;font-size:12px;transition:all .15s}
+.srch-toggle-btn:hover{border-color:var(--primary);color:var(--primary)}
+.srch-toggle-btn.on{background:var(--pl);border-color:var(--primary);color:var(--pd)}
+
+/* ── v4: SCROLL BUTTONS ── */
+.scroll-btns{position:absolute;right:18px;bottom:18px;display:flex;
+  flex-direction:column;gap:8px;z-index:20}
+.scroll-btn{width:38px;height:38px;border-radius:50%;border:1px solid var(--bd);
+  background:var(--sur);color:var(--primary);cursor:pointer;font-size:16px;
+  box-shadow:0 2px 10px var(--sh);transition:all .15s;display:none;
+  align-items:center;justify-content:center}
+.scroll-btn:hover{background:var(--pl);transform:translateY(-2px)}
+.scroll-btn.show{display:flex}
+
+/* ── v4: CODE COPY ── */
+.code-wrap{position:relative}
+.code-copy{position:absolute;top:6px;right:6px;background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.18);color:#cdd3dc;border-radius:6px;
+  padding:3px 9px;font-size:11px;cursor:pointer;opacity:0;transition:opacity .15s;
+  font-family:var(--fb)}
+.code-wrap:hover .code-copy{opacity:1}
+.code-copy:hover{background:rgba(255,255,255,.2)}
+.code-copy.done{background:#6B8F71;color:#fff;border-color:#6B8F71;opacity:1}
+
+/* ── v5.1: 消息操作栏 ── */
+.msg-actions{display:flex;gap:4px;margin-top:4px;opacity:0;transition:opacity .15s;
+  justify-content:flex-end}
+.msg-wrap:hover .msg-actions{opacity:1}
+.msg-wrap.human .msg-actions{justify-content:flex-end}
+.msg-wrap.assistant .msg-actions{justify-content:flex-start}
+
+.action-btn{background:var(--pl);border:1px solid var(--bd);color:var(--t3);
+  border-radius:6px;padding:3px 9px;font-size:11px;cursor:pointer;
+  font-family:var(--fb);transition:all .15s}
+.action-btn:hover{background:var(--sand);color:var(--t2)}
+.action-btn.done{background:#6B8F71;color:#fff;border-color:#6B8F71}
+
+/* ── v5.1: 思考/附件操作栏 ── */
+.think-actions,.att-actions{display:flex;gap:4px;padding:4px 11px;
+  border-top:1px solid var(--bd);opacity:0;transition:opacity .15s;
+  justify-content:flex-end}
+.thinking-block:hover .think-actions,
+.att-block:hover .att-actions{opacity:1}
+
+/* ── v4: HEATMAP ── */
+.heatmap-wrap{overflow-x:auto;padding-bottom:4px}
+.heatmap{display:flex;gap:3px}
+.hm-week{display:flex;flex-direction:column;gap:3px}
+.hm-day{width:12px;height:12px;border-radius:2px;background:var(--sand);cursor:pointer;
+  transition:transform .1s}
+.hm-day:hover{transform:scale(1.3);outline:1px solid var(--primary)}
+.hm-legend{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--t3);margin-top:10px}
+.hm-legend-box{width:12px;height:12px;border-radius:2px}
+.hm-tooltip{position:fixed;background:var(--t1);color:var(--bg);padding:4px 9px;
+  border-radius:6px;font-size:11px;pointer-events:none;z-index:300;display:none;white-space:nowrap}
+
+/* ── v4: CACHE STATUS BAR ── */
+#cache-bar{padding:7px 12px;border-top:1px solid var(--bd);font-size:11px;
+  color:var(--t3);display:flex;align-items:center;gap:6px;flex-shrink:0;background:var(--sur)}
+#cache-status{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cache-clear{background:none;border:1px solid var(--bd);border-radius:6px;
+  padding:3px 9px;color:var(--t2);cursor:pointer;font-size:11px;transition:all .15s}
+.cache-clear:hover{border-color:#c0504d;color:#c0504d}
+
+/* ── v4: MODAL ── */
+#modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);
+  z-index:250;align-items:center;justify-content:center;padding:20px}
+#modal-overlay.show{display:flex}
+.modal{background:var(--sur);border-radius:16px;padding:24px;max-width:420px;width:100%;
+  box-shadow:0 12px 48px rgba(0,0,0,.25)}
+.modal-title{font-family:var(--fd);font-size:18px;font-weight:700;margin-bottom:6px}
+.modal-sub{font-size:13px;color:var(--t2);margin-bottom:18px;line-height:1.6}
+.modal-btns{display:flex;gap:10px;margin-bottom:14px}
+.modal-btn{flex:1;padding:11px;border-radius:10px;font-size:13px;cursor:pointer;
+  border:1px solid var(--bd);background:var(--sur);color:var(--t1);transition:all .15s;font-weight:500}
+.modal-btn:hover{border-color:var(--primary)}
+.modal-btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+.modal-btn.primary:hover{background:var(--pd)}
+.modal-check{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--t3);cursor:pointer}
+.modal-note{font-size:11px;color:var(--t3);margin-top:10px;line-height:1.5;
+  background:var(--bg);padding:8px 11px;border-radius:8px}
+
 /* Print */
 @media print{
-  #sidebar,#sb-search-wrap,#tabs,#sidebar-header,.search-bar,
-  .detail-header,#loading,#upload-screen,#main-screen,#branch-panel{display:none!important}
+  #sidebar,#sb-search-wrap,#tabs,#sidebar-header,.search-bar,#srch-sidebar,.scroll-btns,
+  .detail-header,#loading,#upload-screen,#main-screen{display:none!important}
   #print-area{display:block!important}
   body{overflow:auto;height:auto}
 }
@@ -370,7 +466,7 @@ mark.hl.cur{background:var(--primary);color:#fff}
   <div class="u-logo">🗂️</div>
   <div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px">
     <div class="u-title">Claude 数据查看器</div>
-    <div class="ver-badge">v3.0</div>
+    <div class="ver-badge" id="ver-badge">v5.1</div>
     <div class="u-sub">数据完全本地处理 · 不上传任何内容</div>
   </div>
   <div class="drop-zone" id="drop-zone">
@@ -380,7 +476,7 @@ mark.hl.cur{background:var(--primary);color:#fff}
     <label for="file-input" class="pick-btn" id="pick-label">选择文件</label>
     <input type="file" id="file-input" accept=".json,.zip,.md,.markdown" multiple>
   </div>
-  <div class="u-note">对话 · 项目 · 记忆 · 账户 · 统计 · 全局搜索 · 附件 · 分支</div>
+  <div class="u-note">对话 · 项目 · 记忆 · 账户 · 统计 · 全局搜索 · 收藏标签 · 深色模式 · 一键复制</div>
 </div>
 
 <!-- MAIN -->
@@ -407,6 +503,10 @@ mark.hl.cur{background:var(--primary);color:#fff}
       <input id="sb-search" placeholder="搜索…" type="text">
     </div>
     <div id="sb-scroll"></div>
+    <div id="cache-bar" style="display:none">
+      <span id="cache-status">🔒 仅本次会话</span>
+      <button class="cache-clear" id="cache-clear" style="display:none">清除</button>
+    </div>
   </div>
   <div id="content-area">
     <div id="static-panel"></div>
@@ -415,12 +515,11 @@ mark.hl.cur{background:var(--primary);color:#fff}
         <button id="back-btn">← 返回</button>
         <div id="detail-title"></div>
         <div class="dh-actions">
-          <span id="branch-badge" class="branch-badge" style="display:none">🌿 分支</span>
+          <button class="srch-toggle-btn" id="srch-toggle" title="搜索结果面板">📋</button>
           <button class="exp-btn" id="exp-md">↓ MD</button>
           <button class="exp-btn primary" id="exp-pdf">↓ PDF</button>
         </div>
       </div>
-      <div id="branch-panel"></div>
       <div class="search-bar">
         <input id="search-input" placeholder="在当前对话中搜索…" type="text">
         <button class="sb-btn" id="search-btn">搜索</button>
@@ -428,8 +527,33 @@ mark.hl.cur{background:var(--primary);color:#fff}
         <button class="sb-nav" id="search-next" disabled>↓</button>
         <span id="search-count"></span>
       </div>
-      <div class="messages-vp" id="vp"><div id="vc"></div></div>
+      <div id="detail-body">
+        <div class="messages-vp" id="vp"><div id="vc"></div>
+          <div class="scroll-btns">
+            <button class="scroll-btn" id="scroll-top" title="回到顶部">⤒</button>
+            <button class="scroll-btn" id="scroll-bottom" title="跳到底部">⤓</button>
+          </div>
+        </div>
+        <div id="srch-sidebar">
+          <div class="srch-sb-head">
+            <span>搜索结果 <span id="srch-sb-count"></span></span>
+            <button class="srch-sb-close" id="srch-sb-close">✕</button>
+          </div>
+          <div class="srch-sb-list" id="srch-sb-list"></div>
+        </div>
+      </div>
     </div>
+  </div>
+</div>
+<div id="modal-overlay">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">数据导入成功</div>
+    <div class="modal-sub" id="modal-sub"></div>
+    <div class="modal-btns" id="modal-btns"></div>
+    <label class="modal-check" id="modal-remember-wrap">
+      <input type="checkbox" id="modal-remember"> 记住我的选择，下次不再询问
+    </label>
+    <div class="modal-note" id="modal-note"></div>
   </div>
 </div>
 <div id="loading">
@@ -444,12 +568,16 @@ mark.hl.cur{background:var(--primary);color:#fff}
 <script>
 (function(){
 'use strict';
+// ── 版本号（发版只改这一处，标题与徽章自动同步）──
+const APP_VERSION='v5.1';
+document.title='Claude 数据查看器 '+APP_VERSION;
+document.addEventListener('DOMContentLoaded',()=>{const b=document.getElementById('ver-badge');if(b)b.textContent=APP_VERSION;});
 if(typeof marked!=='undefined')marked.setOptions({breaks:true,gfm:true});
 
 // ── STATE ──────────────────────────────────────────────
 let appData={convs:[],projects:[],memories:null,account:null,globalMemory:null};
 let filteredConvs=[],listDisplay=[];
-let curConv=null,curMsgs=[],curBranches=[],curBranchIdx=0;
+let curConv=null,curMsgs=[];
 let curTab='convs',curMemSection='';
 
 // LocalStorage state
@@ -457,14 +585,61 @@ let favorites=new Set(JSON.parse(localStorage.getItem('cv_favs')||'[]'));
 let tags=JSON.parse(localStorage.getItem('cv_tags')||'{}');
 let darkMode=localStorage.getItem('cv_dark')==='1';
 let filterFav=false,filterTag='';
+let dayFilter='';
 
 // VS
-const EST_H=130,SCAN=4;
+const EST_H=150,SCAN=4;
+const FULL_RENDER_THRESHOLD=500; // <= this many messages: render all at once (smoother + Ctrl+F); else virtual scroll
 let heights=[],offsets=[],totalH=0,rendered=new Map();
+let fullRenderMode=false;
 // Search
 let srchQ='',srchHits=[],srchCur=-1;
 // Global search results
 let gsResults=[];
+// v4 state
+let cacheMode=localStorage.getItem('cv_cachemode')||''; // 'always','never',''
+let isCached=false;
+let srchSidebarOpen=false;
+
+// ── INDEXEDDB ──────────────────────────────────────────
+function openDB(){
+  return new Promise((res,rej)=>{
+    const req=indexedDB.open('claude_viewer_v4',1);
+    req.onupgradeneeded=e=>{
+      const db=e.target.result;
+      if(!db.objectStoreNames.contains('store'))db.createObjectStore('store',{keyPath:'key'});
+    };
+    req.onsuccess=e=>res(e.target.result);
+    req.onerror=()=>rej(req.error);
+  });
+}
+async function dbSave(appDataObj){
+  try{
+    const db=await openDB();
+    const tx=db.transaction('store','readwrite');
+    tx.objectStore('store').put({key:'appData',data:appDataObj,savedAt:new Date().toISOString()});
+    return new Promise((res,rej)=>{tx.oncomplete=res;tx.onerror=()=>rej(tx.error);});
+  }catch(e){console.error('DB save failed',e);}
+}
+async function dbLoad(){
+  try{
+    const db=await openDB();
+    return new Promise((res)=>{
+      const tx=db.transaction('store','readonly');
+      const req=tx.objectStore('store').get('appData');
+      req.onsuccess=()=>res(req.result||null);
+      req.onerror=()=>res(null);
+    });
+  }catch(e){return null;}
+}
+async function dbClear(){
+  try{
+    const db=await openDB();
+    const tx=db.transaction('store','readwrite');
+    tx.objectStore('store').clear();
+    return new Promise(res=>{tx.oncomplete=res;});
+  }catch(e){}
+}
 
 // ── DOM ────────────────────────────────────────────────
 const $=id=>document.getElementById(id);
@@ -472,15 +647,51 @@ const uploadScreen=$('upload-screen'),mainScreen=$('main-screen'),detailView=$('
 const staticPanel=$('static-panel'),fileInput=$('file-input'),dropZone=$('drop-zone');
 const sbScroll=$('sb-scroll'),shSub=$('sh-sub'),sbSearch=$('sb-search');
 const tabs=document.querySelectorAll('.tab');
-const detailTitle=$('detail-title'),branchBadge=$('branch-badge'),branchPanel=$('branch-panel');
+const detailTitle=$('detail-title');
 const vp=$('vp'),vc=$('vc');
 const searchInput=$('search-input'),searchBtn=$('search-btn');
 const searchPrev=$('search-prev'),searchNext=$('search-next'),searchCount=$('search-count');
 const loading=$('loading'),loadingMsg=$('loading-msg');
 const progressWrap=$('progress-wrap'),progressBar=$('progress-bar');
+// v4 DOM
+const srchSidebar=$('srch-sidebar'),srchSbList=$('srch-sb-list'),srchSbCount=$('srch-sb-count');
+const scrollTopBtn=$('scroll-top'),scrollBottomBtn=$('scroll-bottom');
+const cacheBar=$('cache-bar'),cacheStatus=$('cache-status'),cacheClearBtn=$('cache-clear');
+const modalOverlay=$('modal-overlay'),modalTitle=$('modal-title'),modalSub=$('modal-sub');
+const modalBtns=$('modal-btns'),modalNote=$('modal-note'),modalRemember=$('modal-remember');
+const modalRememberWrap=$('modal-remember-wrap');
 
 // ── INIT ───────────────────────────────────────────────
 applyTheme();
+checkStartupCache();
+
+async function checkStartupCache(){
+  if(cacheMode==='never')return; // user opted out
+  const cached=await dbLoad();
+  if(cached&&cached.data){
+    showCachePrompt(cached);
+  }
+}
+
+function showCachePrompt(cached){
+  const n=(cached.data.convs||[]).filter(c=>(c.chat_messages||[]).some(m=>(m.text||(m.content||[]).map(b=>b.text||b.thinking||'').join('')).trim())).length;
+  modalTitle.textContent='🗂 发现本地缓存';
+  modalSub.textContent=`检测到上次保存的数据：约 ${n} 条对话 · 上次导入 ${fmtFull(cached.savedAt)}`;
+  modalRememberWrap.style.display='none';
+  modalNote.style.display='none';
+  modalBtns.innerHTML='';
+  const b1=document.createElement('button');b1.className='modal-btn primary';b1.textContent='直接加载';
+  b1.addEventListener('click',()=>{
+    modalOverlay.classList.remove('show');
+    appData=cached.data;isCached=true;
+    finalizeData(true);
+    updateCacheBar();
+  });
+  const b2=document.createElement('button');b2.className='modal-btn';b2.textContent='重新导入';
+  b2.addEventListener('click',()=>{modalOverlay.classList.remove('show');});
+  modalBtns.appendChild(b1);modalBtns.appendChild(b2);
+  modalOverlay.classList.add('show');
+}
 
 // ── SCREEN ────────────────────────────────────────────
 function showMain(){uploadScreen.style.display='none';mainScreen.style.display='flex'}
@@ -526,7 +737,7 @@ dropZone.addEventListener('drop',e=>{
   if(e.dataTransfer.files.length)loadFiles(Array.from(e.dataTransfer.files));
 });
 $('reset-btn').addEventListener('click',()=>{showUpload();fileInput.value='';resetState()});
-$('back-btn').addEventListener('click',()=>{showDetail(false);clearSearch();branchPanel.style.display='none'});
+$('back-btn').addEventListener('click',()=>{showDetail(false);clearSearch()});
 
 function resetState(){
   appData={convs:[],projects:[],memories:null,account:null,globalMemory:null};
@@ -584,7 +795,7 @@ function readText(file){
   });
 }
 
-function finalizeData(){
+function finalizeData(fromCache){
   const seen=new Set();
   appData.projects=appData.projects.filter(p=>{if(seen.has(p.uuid))return false;seen.add(p.uuid);return true;});
   filteredConvs=appData.convs
@@ -593,13 +804,9 @@ function finalizeData(){
       const msgs=(c.chat_messages||[]).filter(m=>msgText(m).trim());
       const thinkCount=msgs.reduce((s,m)=>s+(m.content||[]).filter(b=>b.type==='thinking').length,0);
       const attCount=msgs.reduce((s,m)=>s+((m.attachments||[]).length+(m.files||[]).length),0);
-      // Detect branches
-      const parentMap={};
-      msgs.forEach(m=>{const p=m.parent_message_uuid;if(p){if(!parentMap[p])parentMap[p]=[];parentMap[p].push(m.uuid);}});
-      const hasBranch=Object.values(parentMap).some(v=>v.length>1);
       return{uuid:c.uuid,name:c.name||c.summary||'（无标题对话）',
         msgCount:msgs.length,lastActive:c.updated_at||c.created_at||'',
-        createdAt:c.created_at||'',thinkCount,attCount,hasBranch};
+        createdAt:c.created_at||'',thinkCount,attCount};
     })
     .sort((a,b)=>new Date(b.lastActive)-new Date(a.lastActive));
   listDisplay=filteredConvs.slice();
@@ -611,7 +818,60 @@ function finalizeData(){
   shSub.textContent=parts.join(' · ')||'—';
   setTab('convs');
   hideLoad();showMain();showDetail(false);
+  updateCacheBar();
+  // Fresh import (not from cache): decide whether to prompt for saving
+  if(!fromCache){
+    if(cacheMode==='always'){doSaveCache();}
+    else if(cacheMode==='never'){/* stay in memory */}
+    else{showSavePrompt();}
+  }
 }
+
+function showSavePrompt(){
+  modalTitle.textContent='✅ 数据导入成功';
+  modalSub.textContent=`已加载 ${filteredConvs.length} 条对话。是否在此设备上保存数据？下次打开无需重新导入。`;
+  modalRememberWrap.style.display='flex';
+  modalRemember.checked=false;
+  modalNote.style.display='block';
+  modalNote.textContent='💡 数据将保存在此设备的浏览器本地（仅本机可见，不会上传）。可随时在左下角点击「清除」删除。';
+  modalBtns.innerHTML='';
+  const b1=document.createElement('button');b1.className='modal-btn primary';b1.textContent='💾 保存到本地';
+  b1.addEventListener('click',()=>{
+    if(modalRemember.checked){cacheMode='always';localStorage.setItem('cv_cachemode','always');}
+    modalOverlay.classList.remove('show');doSaveCache();
+  });
+  const b2=document.createElement('button');b2.className='modal-btn';b2.textContent='🔒 仅本次使用';
+  b2.addEventListener('click',()=>{
+    if(modalRemember.checked){cacheMode='never';localStorage.setItem('cv_cachemode','never');}
+    modalOverlay.classList.remove('show');isCached=false;updateCacheBar();
+  });
+  modalBtns.appendChild(b1);modalBtns.appendChild(b2);
+  modalOverlay.classList.add('show');
+}
+
+function doSaveCache(){
+  isCached=true;updateCacheBar();
+  // async, non-blocking
+  setTimeout(()=>{dbSave(appData);},400);
+}
+
+function updateCacheBar(){
+  cacheBar.style.display='flex';
+  if(isCached){
+    cacheStatus.textContent='💾 本地已缓存';
+    cacheClearBtn.style.display='';
+  } else {
+    cacheStatus.textContent='🔒 仅本次会话';
+    cacheClearBtn.style.display='none';
+  }
+}
+
+cacheClearBtn.addEventListener('click',async()=>{
+  await dbClear();
+  isCached=false;
+  localStorage.removeItem('cv_cachemode');cacheMode='';
+  showUpload();fileInput.value='';resetState();
+});
 
 // ── TABS ───────────────────────────────────────────────
 tabs.forEach(t=>t.addEventListener('click',()=>setTab(t.dataset.tab)));
@@ -626,6 +886,7 @@ function setTab(id){
 sbSearch.addEventListener('input',()=>{
   const q=sbSearch.value.trim().toLowerCase();
   if(curTab==='convs'){
+    sbSearch.placeholder='搜索…';
     applyConvFilters(q);renderConvList();
   } else renderSidebarForTab();
 });
@@ -643,6 +904,7 @@ function renderSidebarForTab(){
 // ── CONV LIST ──────────────────────────────────────────
 function applyConvFilters(q){
   let list=filteredConvs.slice();
+  if(dayFilter)list=list.filter(c=>(c.createdAt||'').slice(0,10)===dayFilter);
   if(filterFav)list=list.filter(c=>favorites.has(c.uuid));
   if(filterTag)list=list.filter(c=>(tags[c.uuid]||[]).includes(filterTag));
   if(q)list=list.filter(c=>c.name.toLowerCase().includes(q));
@@ -651,6 +913,16 @@ function applyConvFilters(q){
 
 function renderConvList(){
   const scroll=sbScroll;scroll.innerHTML='';
+  // Apply current filters first (covers day-filter set from heatmap)
+  applyConvFilters(sbSearch.value.trim().toLowerCase());
+  // Day filter banner
+  if(dayFilter){
+    const banner=document.createElement('div');
+    banner.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 11px;margin-bottom:8px;background:var(--pl);border-radius:8px;font-size:12px;color:var(--pd);cursor:pointer';
+    banner.innerHTML=`<span>📅 已筛选 ${dayFilter}（${listDisplay.length}条）</span><span style="font-weight:600">✕ 清除</span>`;
+    banner.addEventListener('click',()=>{dayFilter='';applyConvFilters(sbSearch.value.trim().toLowerCase());renderConvList();});
+    scroll.appendChild(banner);
+  }
   // Filter bar
   const fb=document.createElement('div');fb.className='filter-bar';
   // Fav filter
@@ -696,11 +968,10 @@ function renderConvList(){
     top.appendChild(name);top.appendChild(fb2);card.appendChild(top);
     // Meta
     const meta=document.createElement('div');meta.className='card-meta';
-    const b1=document.createElement('span');b1.className='badge';b1.textContent=conv.msgCount+' 条';
+    const b1=document.createElement('span');b1.className='badge';b1.textContent=conv.msgCount+' 条';b1.title='消息数量';
     meta.appendChild(b1);
-    if(conv.thinkCount){const b2=document.createElement('span');b2.className='badge blue';b2.textContent='💭 '+conv.thinkCount;meta.appendChild(b2);}
-    if(conv.attCount){const b3=document.createElement('span');b3.className='badge gray';b3.textContent='📎 '+conv.attCount;meta.appendChild(b3);}
-    if(conv.hasBranch){const b4=document.createElement('span');b4.className='badge gray';b4.textContent='🌿 分支';meta.appendChild(b4);}
+    if(conv.thinkCount){const b2=document.createElement('span');b2.className='badge blue';b2.textContent='💭 '+conv.thinkCount;b2.title='思考块数量';meta.appendChild(b2);}
+    if(conv.attCount){const b3=document.createElement('span');b3.className='badge gray';b3.textContent='📎 '+conv.attCount;b3.title='附件/文件数量';meta.appendChild(b3);}
     const ct=document.createElement('span');ct.className='card-time';ct.textContent=fmtDate(conv.lastActive);meta.appendChild(ct);
     card.appendChild(meta);
     // Tags
@@ -811,17 +1082,25 @@ function doGlobalSearch(){
 }
 
 function openConvAtMsg(convUuid,msgUuid,q){
+  // Switch to convs tab FIRST (setTab calls showDetail(false)), then open conv
+  curTab='convs';
+  tabs.forEach(t=>t.classList.toggle('active',t.dataset.tab==='convs'));
   openConv(convUuid,()=>{
-    // After render, search for q and jump to that message
     searchInput.value=q;
     doSearch();
-    // Also try to find the specific message
+    // Jump to the first hit in the matched message
     const idx=curMsgs.findIndex(m=>m.uuid===msgUuid);
     if(idx>=0){
-      setTimeout(()=>{vp.scrollTop=Math.max(0,(offsets[idx]||0)-80);renderVisible();},100);
+      const hitPos=srchHits.findIndex(h=>h.msgIdx===idx);
+      if(hitPos>=0){srchCur=hitPos;scrollToHit(hitPos);}
+      else{
+        const node=rendered.get(idx);
+        if(fullRenderMode&&node){const r=node.getBoundingClientRect(),vpr=vp.getBoundingClientRect();vp.scrollTop+=(r.top-vpr.top)-80;}
+        else{vp.scrollTop=Math.max(0,(offsets[idx]||0)-80);renderVisible();}
+        setTimeout(applyHL,150);
+      }
     }
   });
-  setTab('convs');
 }
 
 // ── STATISTICS ────────────────────────────────────────
@@ -833,8 +1112,6 @@ function renderStats(){
   const totalMsgs=filteredConvs.reduce((s,c)=>s+c.msgCount,0);
   const totalThink=filteredConvs.reduce((s,c)=>s+c.thinkCount,0);
   const totalAtt=filteredConvs.reduce((s,c)=>s+c.attCount,0);
-  const branchConvs=filteredConvs.filter(c=>c.hasBranch).length;
-
   // Monthly distribution
   const monthMap={};
   appData.convs.filter(c=>hasContent(c)).forEach(c=>{
@@ -848,20 +1125,20 @@ function renderStats(){
   const topConvs=filteredConvs.slice().sort((a,b)=>b.msgCount-a.msgCount).slice(0,10);
 
   // Build SVG bar chart
-  const W=480,H=120,PAD=30,BAR_GAP=4;
+  const W=380,H=150,PAD=26,BAR_GAP=6;
   const n=months.length;
-  const barW=n>0?Math.max(4,Math.floor((W-PAD*2-BAR_GAP*(n-1))/n)):20;
+  const barW=n>0?Math.max(8,Math.floor((W-PAD*2-BAR_GAP*(n-1))/n)):20;
   let bars='';
   months.forEach((m,i)=>{
     const val=monthMap[m];
-    const bh=Math.round((val/maxVal)*(H-24));
+    const bh=Math.round((val/maxVal)*(H-34));
     const x=PAD+i*(barW+BAR_GAP);
-    const y=H-4-bh;
+    const y=H-16-bh;
     bars+=`<rect x="${x}" y="${y}" width="${barW}" height="${bh}" rx="3" fill="var(--primary)" opacity=".85"/>
-      <text x="${x+barW/2}" y="${H}" text-anchor="middle" font-size="9" fill="var(--t3)">${m.slice(5)}</text>
-      <text x="${x+barW/2}" y="${y-3}" text-anchor="middle" font-size="9" fill="var(--t2)">${val}</text>`;
+      <text x="${x+barW/2}" y="${H-3}" text-anchor="middle" font-size="10" fill="var(--t3)">${m.slice(2)}</text>
+      <text x="${x+barW/2}" y="${y-4}" text-anchor="middle" font-size="10" fill="var(--t2)">${val}</text>`;
   });
-  const svg=`<svg viewBox="0 0 ${W} ${H+10}" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:${W}px">${bars}</svg>`;
+  const svg=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto">${bars}</svg>`;
 
   let html=`<div class="panel-title">📊 统计概览</div>
     <div class="stat-grid">
@@ -869,12 +1146,17 @@ function renderStats(){
       <div class="stat-card"><div class="stat-num">${totalMsgs}</div><div class="stat-label">消息总数</div></div>
       <div class="stat-card"><div class="stat-num">${totalThink}</div><div class="stat-label">思考块</div></div>
       <div class="stat-card"><div class="stat-num">${totalAtt}</div><div class="stat-label">附件/文件</div></div>
-      <div class="stat-card"><div class="stat-num">${branchConvs}</div><div class="stat-label">含分支对话</div></div>
       <div class="stat-card"><div class="stat-num">${appData.projects.length}</div><div class="stat-label">项目数</div></div>
     </div>
-    <div class="chart-wrap">
-      <div class="chart-title">对话创建分布（按月）</div>
-      ${months.length?svg:'<div class="empty-hint">无数据</div>'}
+    <div class="charts-row">
+      <div class="chart-wrap">
+        <div class="chart-title">对话创建分布（按月）</div>
+        ${months.length?svg:'<div class="empty-hint">无数据</div>'}
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-title">📅 活动热力图（按天）</div>
+        <div class="heatmap-wrap" id="heatmap-host"></div>
+      </div>
     </div>
     <div class="section-card">
       <div class="sc-title">💬 消息最多的对话</div>
@@ -888,8 +1170,82 @@ function renderStats(){
       </table>
     </div>`;
   staticPanel.innerHTML=html;
+  renderHeatmap($('heatmap-host'));
 }
-window.openConvById=uuid=>{openConv(uuid);setTab('convs');};
+
+// ── v4: HEATMAP ──
+function renderHeatmap(host){
+  if(!host)return;
+  // Count convs per day
+  const dayMap={};
+  appData.convs.filter(c=>hasContent(c)).forEach(c=>{
+    const d=(c.created_at||'').slice(0,10);if(d)dayMap[d]=(dayMap[d]||0)+1;
+  });
+  const days=Object.keys(dayMap);
+  if(!days.length){host.innerHTML='<div class="empty-hint">无数据</div>';return;}
+  days.sort();
+  const first=new Date(days[0]),last=new Date(days[days.length-1]);
+  // Start from the Sunday before first
+  const start=new Date(first);start.setDate(start.getDate()-start.getDay());
+  const maxVal=Math.max(...Object.values(dayMap));
+  const weeks=[];let cur=new Date(start);
+  while(cur<=last){
+    const week=[];
+    for(let i=0;i<7;i++){
+      const ds=cur.toISOString().slice(0,10);
+      week.push({date:ds,count:dayMap[ds]||0,inRange:cur>=first&&cur<=last});
+      cur.setDate(cur.getDate()+1);
+    }
+    weeks.push(week);
+  }
+  function color(v){
+    if(v===0)return 'var(--sand)';
+    const t=v/maxVal;
+    if(t<=.25)return 'rgba(217,119,87,.3)';
+    if(t<=.5)return 'rgba(217,119,87,.5)';
+    if(t<=.75)return 'rgba(217,119,87,.75)';
+    return 'var(--primary)';
+  }
+  const hm=document.createElement('div');hm.className='heatmap';
+  weeks.forEach(week=>{
+    const wk=document.createElement('div');wk.className='hm-week';
+    week.forEach(day=>{
+      const cell=document.createElement('div');cell.className='hm-day';
+      cell.style.background=day.inRange?color(day.count):'transparent';
+      if(day.inRange){
+        cell.addEventListener('mouseenter',e=>showHmTip(e,day));
+        cell.addEventListener('mouseleave',hideHmTip);
+        if(day.count>0)cell.addEventListener('click',()=>filterByDay(day.date));
+      }
+      wk.appendChild(cell);
+    });
+    hm.appendChild(wk);
+  });
+  host.innerHTML='';host.appendChild(hm);
+  const legend=document.createElement('div');legend.className='hm-legend';
+  legend.innerHTML='<span>少</span>'+
+    ['var(--sand)','rgba(217,119,87,.3)','rgba(217,119,87,.5)','rgba(217,119,87,.75)','var(--primary)']
+    .map(c=>`<span class="hm-legend-box" style="background:${c}"></span>`).join('')+'<span>多</span>';
+  host.appendChild(legend);
+}
+let hmTip=null;
+function showHmTip(e,day){
+  if(!hmTip){hmTip=document.createElement('div');hmTip.className='hm-tooltip';document.body.appendChild(hmTip);}
+  hmTip.textContent=`${day.date}：${day.count} 条对话`;
+  hmTip.style.display='block';
+  hmTip.style.left=(e.clientX+10)+'px';hmTip.style.top=(e.clientY-30)+'px';
+}
+function hideHmTip(){if(hmTip)hmTip.style.display='none';}
+function filterByDay(date){
+  dayFilter=date;
+  setTab('convs');
+}
+
+window.openConvById=uuid=>{
+  curTab='convs';
+  tabs.forEach(t=>t.classList.toggle('active',t.dataset.tab==='convs'));
+  openConv(uuid);
+};
 
 // ── PROJECTS ──────────────────────────────────────────
 function renderProjectsList(){
@@ -947,11 +1303,6 @@ function renderMemoriesList(){
   const items=[];
   if(appData.globalMemory&&appData.globalMemory.length)
     appData.globalMemory.forEach((m,i)=>items.push({id:'g'+i,label:'🌐 '+m.filename.replace(/\.md$/i,''),type:'global',idx:i}));
-  const pm=(appData.memories&&appData.memories.project_memories)||{};
-  Object.keys(pm).forEach(uuid=>{
-    const proj=appData.projects.find(p=>p.uuid===uuid);
-    items.push({id:'p'+uuid,label:'📁 '+(proj?proj.name:uuid.slice(0,8)+'…'),type:'proj',uuid});
-  });
   // Import button
   const importWrap=document.createElement('div');importWrap.style.cssText='padding:6px 2px 10px';
   const importBtn=document.createElement('label');
@@ -966,9 +1317,15 @@ function renderMemoriesList(){
     hideLoad();renderMemoriesList();
   });
   importBtn.appendChild(mdInput);importWrap.appendChild(importBtn);scroll.appendChild(importWrap);
+  const pmCount=Object.keys((appData.memories&&appData.memories.project_memories)||{}).length;
   if(!items.length){
-    scroll.insertAdjacentHTML('beforeend','<div class="empty-hint">暂无记忆数据</div>');
-    staticPanel.innerHTML='<div class="panel-title">🧠 记忆</div><div style="padding:20px;color:var(--t3);font-size:13px;text-align:center">点击上方按钮导入 .md 全局记忆文件</div>';return;
+    scroll.insertAdjacentHTML('beforeend','<div class="empty-hint" style="font-size:12px">尚未导入全局记忆</div>');
+    staticPanel.innerHTML=`<div class="panel-title">🧠 全局记忆</div>
+      <div class="section-card"><div class="sc-body">
+      全局记忆是 Claude 跨对话记住的关于你的信息。它不在标准导出包内，需在 Claude 界面单独导出为 <code>.md</code> 文件后，点击左侧「＋ 导入全局记忆 .md」导入查看。
+      ${pmCount?`<br><br>💡 你的数据包含 ${pmCount} 个<strong>项目记忆</strong>，已归入 <strong>📁 项目</strong> 标签页对应项目下查看。`:''}
+      </div></div>`;
+    return;
   }
   if(!items.find(it=>it.id===curMemSection))curMemSection=items[0].id;
   const frag=document.createDocumentFragment();
@@ -978,28 +1335,21 @@ function renderMemoriesList(){
     card.innerHTML=`<div class="card-name">${esc(item.label)}</div>`;
     card.addEventListener('click',()=>{
       curMemSection=item.id;scroll.querySelectorAll('.s-card').forEach(c=>c.classList.remove('active'));
-      card.classList.add('active');renderMemoryPanel(item,pm);
+      card.classList.add('active');renderMemoryPanel(item);
     });
     frag.appendChild(card);
   });
   scroll.appendChild(frag);
-  renderMemoryPanel(items.find(it=>it.id===curMemSection)||items[0],pm);
+  renderMemoryPanel(items.find(it=>it.id===curMemSection)||items[0]);
 }
 
-function renderMemoryPanel(item,pm){
+function renderMemoryPanel(item){
   staticPanel.style.display='block';detailView.style.display='none';
-  if(item.type==='global'){
-    const m=appData.globalMemory[item.idx];
-    staticPanel.innerHTML=`<div class="panel-title" style="display:flex;align-items:center;justify-content:space-between">
-      <span>🌐 ${esc(m.filename.replace(/\.md$/i,''))}</span>
-      <button class="exp-btn" onclick="exportMemMd(${item.idx})" style="font-size:11px">↓ 导出</button>
-    </div><div class="section-card"><div class="mem-md">${marked.parse(m.text)}</div></div>`;
-  } else {
-    const mem=pm[item.uuid]||'';
-    const proj=appData.projects.find(p=>p.uuid===item.uuid);
-    staticPanel.innerHTML=`<div class="panel-title">📁 ${esc(proj?proj.name:item.uuid.slice(0,8)+'…')}</div>
-      <div class="section-card"><div class="mem-text">${renderMemText(mem)}</div></div>`;
-  }
+  const m=appData.globalMemory[item.idx];
+  staticPanel.innerHTML=`<div class="panel-title" style="display:flex;align-items:center;justify-content:space-between">
+    <span>🌐 ${esc(m.filename.replace(/\.md$/i,''))}</span>
+    <button class="exp-btn" onclick="exportMemMd(${item.idx})" style="font-size:11px">↓ 导出</button>
+  </div><div class="section-card"><div class="mem-md">${marked.parse(m.text)}</div></div>`;
 }
 
 function renderMemText(text){
@@ -1041,88 +1391,39 @@ let _openCallback=null;
 function openConv(uuid,callback){
   const raw=appData.convs.find(c=>c.uuid===uuid);if(!raw)return;
   curConv=raw;_openCallback=callback||null;
-  // Build message tree and get main branch
-  const{mainPath,branches}=buildMsgTree(raw.chat_messages||[]);
-  curBranches=branches;curBranchIdx=0;
-  curMsgs=mainPath.filter(m=>msgText(m).trim());
+  // Linear message list (all messages in chronological order)
+  curMsgs=(raw.chat_messages||[]).filter(m=>msgText(m).trim());
   detailTitle.textContent=raw.name||raw.summary||'（无标题对话）';
-  // Branch badge
-  const extraBranches=branches.filter(b=>b!==mainPath).length;
-  if(extraBranches>0){
-    branchBadge.style.display='';
-    branchBadge.textContent=`🌿 ${branches.length}条分支`;
-    branchPanel.style.display='none';
-    buildBranchPanel(branches,mainPath);
-  } else {
-    branchBadge.style.display='none';
-    branchPanel.style.display='none';
-    branchPanel.innerHTML='';
-  }
   clearSearch();initVS();showDetail(true);vp.scrollTop=0;
+  toggleSrchSidebar(false);updateScrollBtns();
   if(_openCallback)setTimeout(()=>{_openCallback();_openCallback=null;},150);
 }
 
-function buildMsgTree(msgs){
-  if(!msgs.length)return{mainPath:[],branches:[]};
-  // Build parent→children map
-  const childMap={};
-  const byUuid={};
-  msgs.forEach(m=>{byUuid[m.uuid]=m;});
-  msgs.forEach(m=>{
-    const p=m.parent_message_uuid;
-    if(p){if(!childMap[p])childMap[p]=[];childMap[p].push(m);}
-  });
-  // Find roots (no parent or parent not in set)
-  const roots=msgs.filter(m=>!m.parent_message_uuid||!byUuid[m.parent_message_uuid]);
-  // DFS to get all paths, pick longest as main
-  const allPaths=[];
-  function dfs(node,path){
-    const np=[...path,node];
-    const children=childMap[node.uuid]||[];
-    if(!children.length){allPaths.push(np);return;}
-    children.forEach(c=>dfs(c,np));
-  }
-  roots.forEach(r=>dfs(r,[]));
-  if(!allPaths.length)return{mainPath:msgs,branches:[]};
-  // Main path = longest path (or most recent leaf)
-  allPaths.sort((a,b)=>{
-    if(b.length!==a.length)return b.length-a.length;
-    const la=a[a.length-1].updated_at||'';
-    const lb=b[b.length-1].updated_at||'';
-    return lb.localeCompare(la);
-  });
-  return{mainPath:allPaths[0],branches:allPaths};
-}
-
-function buildBranchPanel(branches,mainPath){
-  branchPanel.innerHTML='<div class="branch-panel-title">🌿 对话分支 — 点击切换查看不同版本</div>';
-  branches.forEach((branch,i)=>{
-    const div=document.createElement('div');
-    div.className='branch-path'+(i===0?' active':'');
-    const label=document.createElement('div');label.className='branch-path-label';
-    const lastMsg=branch[branch.length-1];
-    const preview=msgText(lastMsg).slice(0,50)+'…';
-    label.textContent=`版本 ${i+1}：${preview}`;
-    const count=document.createElement('div');count.className='branch-path-count';
-    count.textContent=branch.length+'条消息';
-    div.appendChild(label);div.appendChild(count);
-    div.addEventListener('click',()=>{
-      curBranchIdx=i;
-      curMsgs=branch.filter(m=>msgText(m).trim());
-      branchPanel.querySelectorAll('.branch-path').forEach((el,j)=>el.classList.toggle('active',j===i));
-      clearSearch();initVS();vp.scrollTop=0;
-    });
-    branchPanel.appendChild(div);
-  });
-}
-
-branchBadge.addEventListener('click',()=>{
-  const vis=branchPanel.style.display==='none'||!branchPanel.style.display;
-  branchPanel.style.display=vis?'block':'none';
-});
-
-// ── VIRTUAL SCROLL ─────────────────────────────────────
+// ── RENDER MODE: full vs virtual ───────────────────────
 function initVS(){
+  fullRenderMode = curMsgs.length <= FULL_RENDER_THRESHOLD;
+  if(fullRenderMode) initFullRender();
+  else initVirtualScroll();
+}
+
+// Full render: build all messages in normal document flow (no absolute positioning)
+function initFullRender(){
+  rendered.clear();vc.innerHTML='';
+  vc.style.height='auto';vc.style.position='static';
+  const frag=document.createDocumentFragment();
+  for(let i=0;i<curMsgs.length;i++){
+    const node=buildMsg(curMsgs[i],i);
+    node.style.cssText='position:static';
+    frag.appendChild(node);
+    rendered.set(i,node);
+  }
+  vc.appendChild(frag);
+  if(srchQ)applyHL();
+}
+
+// Virtual scroll: only render visible window
+function initVirtualScroll(){
+  vc.style.position='relative';
   heights=new Array(curMsgs.length).fill(EST_H);
   offsets=new Array(curMsgs.length).fill(0);
   rendered.clear();vc.innerHTML='';
@@ -1145,6 +1446,7 @@ function getRange(){
   return[s,e];
 }
 function renderVisible(){
+  if(fullRenderMode)return; // full render: nothing to do on scroll
   if(!curMsgs.length)return;
   const[s,e]=getRange();
   for(const[i,node]of rendered){if(i<s||i>e){node.remove();rendered.delete(i);}}
@@ -1164,7 +1466,16 @@ function renderVisible(){
   if(srchQ)applyHL();
 }
 let rafPending=false;
-vp.addEventListener('scroll',()=>{if(!rafPending){rafPending=true;requestAnimationFrame(()=>{renderVisible();rafPending=false;})}});
+vp.addEventListener('scroll',()=>{if(!rafPending){rafPending=true;requestAnimationFrame(()=>{renderVisible();updateScrollBtns();rafPending=false;})}});
+
+// ── v4: SCROLL BUTTONS ──
+function updateScrollBtns(){
+  const st=vp.scrollTop,max=vp.scrollHeight-vp.clientHeight;
+  scrollTopBtn.classList.toggle('show',st>300);
+  scrollBottomBtn.classList.toggle('show',max-st>300);
+}
+scrollTopBtn.addEventListener('click',()=>vp.scrollTo({top:0,behavior:'smooth'}));
+scrollBottomBtn.addEventListener('click',()=>vp.scrollTo({top:vp.scrollHeight,behavior:'smooth'}));
 
 // ── BUILD MESSAGE ──────────────────────────────────────
 function buildMsg(msg,idx){
@@ -1183,12 +1494,25 @@ function buildMsg(msg,idx){
   // Thinking
   if(!isH)(msg.content||[]).filter(b=>b.type==='thinking').forEach(b=>inner.appendChild(buildThinking(b)));
   // Text bubble
-  const textContent=(msg.content||[]).filter(b=>b.type==='text').map(b=>b.text||'').join('\n').trim()||msg.text||'';
+  let textContent=(msg.content||[]).filter(b=>b.type==='text').map(b=>b.text||'').join('\n').trim()||msg.text||'';
+  textContent=replaceUnsupportedBlocks(textContent);
   if(textContent.trim()){
     const bubble=document.createElement('div');bubble.className='bubble '+(isH?'human':'assistant');
-    if(isH)bubble.innerHTML=esc(textContent).replace(/\n/g,'<br>');
-    else try{bubble.innerHTML=marked.parse(textContent);}catch{bubble.textContent=textContent;}
+    if(isH){bubble.innerHTML=esc(textContent).replace(/\n/g,'<br>');renderLatex(bubble);}
+    else try{bubble.innerHTML=marked.parse(textContent);enhanceCodeBlocks(bubble);renderLatex(bubble);}catch{bubble.textContent=textContent;}
     inner.appendChild(bubble);
+    // v5.1: 复制按钮
+    const actions=document.createElement('div');actions.className='msg-actions';
+    const copyBtn=document.createElement('button');copyBtn.className='action-btn';copyBtn.textContent='📋 复制';
+    copyBtn.addEventListener('click',e=>{
+      e.stopPropagation();
+      navigator.clipboard.writeText(textContent).then(()=>{
+        copyBtn.textContent='✅ 已复制';copyBtn.classList.add('done');
+        setTimeout(()=>{copyBtn.textContent='📋 复制';copyBtn.classList.remove('done');},1500);
+      }).catch(()=>{copyBtn.textContent='❌ 失败';setTimeout(()=>copyBtn.textContent='📋 复制',1500);});
+    });
+    actions.appendChild(copyBtn);
+    inner.appendChild(actions);
   }
   // Attachments
   const atts=msg.attachments||[];
@@ -1211,6 +1535,80 @@ function buildMsg(msg,idx){
   wrap.appendChild(inner);return wrap;
 }
 
+// ── LATEX RENDERING (KaTeX, CDN) ──
+// ── friendly notice for unsupported (widget) blocks ──
+function replaceUnsupportedBlocks(text){
+  if(!text)return text;
+  // Claude export turns interactive widget/visualization blocks into this placeholder,
+  // wrapped in a code fence. Replace with a friendly blockquote notice.
+  const placeholder='This block is not supported on your current device yet.';
+  if(text.indexOf(placeholder)===-1)return text;
+  // Remove the code-fence wrapping around the placeholder, then replace the line
+  // Handles ```\n<placeholder>\n``` and bare placeholder lines.
+  text=text.replace(/```[a-zA-Z]*\s*\n?\s*This block is not supported on your current device yet\.\s*\n?```/g,
+    '\n> ⚠️ **此处原为公式或可视化组件** — Claude 导出数据未包含其源码，请在 Claude 网页版查看。\n');
+  // Any remaining bare placeholders
+  text=text.split(placeholder).join('⚠️ 此处原为公式或可视化组件（导出数据未包含源码）');
+  return text;
+}
+
+function renderLatex(container){
+  if(typeof katex==='undefined')return;
+  const walker=document.createTreeWalker(container,NodeFilter.SHOW_TEXT,{
+    acceptNode(node){
+      let p=node.parentNode;
+      while(p&&p!==container){
+        const tag=p.tagName;
+        if(tag==='CODE'||tag==='PRE'||(p.className&&String(p.className).indexOf('katex')>=0))
+          return NodeFilter.FILTER_REJECT;
+        p=p.parentNode;
+      }
+      return /(\$\$[\s\S]+?\$\$)|(\$[^$\n]+?\$)|(\\\([\s\S]+?\\\))|(\\\[[\s\S]+?\\\])/.test(node.textContent)
+        ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+    }
+  });
+  const targets=[];let n;
+  while((n=walker.nextNode()))targets.push(n);
+  targets.forEach(node=>{
+    const text=node.textContent;
+    const frag=document.createDocumentFragment();
+    const re=/(\$\$[\s\S]+?\$\$)|(\\\[[\s\S]+?\\\])|(\$[^$\n]+?\$)|(\\\([\s\S]+?\\\))/g;
+    let last=0,m;
+    while((m=re.exec(text))!==null){
+      if(m.index>last)frag.appendChild(document.createTextNode(text.slice(last,m.index)));
+      const raw=m[0];let tex,display;
+      if(raw.startsWith('$$')){tex=raw.slice(2,-2);display=true;}
+      else if(raw.startsWith('\\[')){tex=raw.slice(2,-2);display=true;}
+      else if(raw.startsWith('\\(')){tex=raw.slice(2,-2);display=false;}
+      else{tex=raw.slice(1,-1);display=false;}
+      const span=document.createElement('span');
+      try{katex.render(tex.trim(),span,{displayMode:display,throwOnError:false,errorColor:'#C4653A'});}
+      catch(e){span.textContent=raw;}
+      frag.appendChild(span);last=re.lastIndex;
+    }
+    if(last<text.length)frag.appendChild(document.createTextNode(text.slice(last)));
+    if(frag.childNodes.length)node.parentNode.replaceChild(frag,node);
+  });
+}
+
+function enhanceCodeBlocks(container){
+  container.querySelectorAll('pre').forEach(pre=>{
+    if(pre.parentElement.classList.contains('code-wrap'))return;
+    const wrap=document.createElement('div');wrap.className='code-wrap';
+    pre.parentNode.insertBefore(wrap,pre);wrap.appendChild(pre);
+    const btn=document.createElement('button');btn.className='code-copy';btn.textContent='复制';
+    btn.addEventListener('click',e=>{
+      e.stopPropagation();
+      const code=pre.querySelector('code')?pre.querySelector('code').textContent:pre.textContent;
+      navigator.clipboard.writeText(code).then(()=>{
+        btn.textContent='已复制 ✓';btn.classList.add('done');
+        setTimeout(()=>{btn.textContent='复制';btn.classList.remove('done');},1500);
+      }).catch(()=>{btn.textContent='复制失败';setTimeout(()=>btn.textContent='复制',1500);});
+    });
+    wrap.appendChild(btn);
+  });
+}
+
 function buildThinking(b){
   const wrap=document.createElement('div');wrap.className='thinking-block';
   const toggle=document.createElement('div');toggle.className='thinking-toggle';
@@ -1221,8 +1619,33 @@ function buildThinking(b){
   if(sums)sumEl.textContent='— '+sums;
   toggle.appendChild(arrow);toggle.appendChild(label);toggle.appendChild(sumEl);
   const body=document.createElement('div');body.className='thinking-body';body.textContent=b.thinking||'';
-  toggle.addEventListener('click',()=>{const o=body.classList.toggle('open');toggle.classList.toggle('open',o);});
-  wrap.appendChild(toggle);wrap.appendChild(body);return wrap;
+  // v5.1: 复制思考按钮
+  const actions=document.createElement('div');actions.className='think-actions';
+  const copyBtn=document.createElement('button');copyBtn.className='action-btn';copyBtn.textContent='📋 复制思考';
+  copyBtn.addEventListener('click',e=>{
+    e.stopPropagation();
+    navigator.clipboard.writeText(b.thinking||'').then(()=>{
+      copyBtn.textContent='✅ 已复制';copyBtn.classList.add('done');
+      setTimeout(()=>{copyBtn.textContent='📋 复制思考';copyBtn.classList.remove('done');},1500);
+    }).catch(()=>{copyBtn.textContent='❌ 失败';setTimeout(()=>copyBtn.textContent='📋 复制思考',1500);});
+  });
+  actions.appendChild(copyBtn);
+  toggle.addEventListener('click',()=>{
+    const o=body.classList.toggle('open');toggle.classList.toggle('open',o);
+    // 展开/收起后通知虚拟滚动重算高度（仅虚拟滚动模式下需要）
+    if(!fullRenderMode)requestAnimationFrame(()=>{
+      const msgWrap=wrap.closest('.msg-wrap');
+      if(!msgWrap)return;
+      const i=parseInt(msgWrap.dataset.idx);
+      if(isNaN(i)||heights[i]===undefined)return;
+      const newH=msgWrap.offsetHeight;
+      if(newH>0&&newH!==heights[i]){
+        heights[i]=newH;recomputeOffsets();vc.style.height=totalH+'px';
+        for(const[j,n]of rendered)n.style.top=offsets[j]+'px';
+      }
+    });
+  });
+  wrap.appendChild(toggle);wrap.appendChild(body);wrap.appendChild(actions);return wrap;
 }
 
 function buildAttachment(a){
@@ -1241,7 +1664,18 @@ function buildAttachment(a){
     const ti=document.createElement('span');ti.className='ti';ti.style.cssText='font-size:9px;margin-right:4px';ti.textContent='▶';
     hdr.insertBefore(ti,icon);
     hdr.addEventListener('click',()=>{const o=body.classList.toggle('open');ti.style.transform=o?'rotate(90deg)':'';});
-    wrap.appendChild(hdr);wrap.appendChild(body);
+    // v5.1: 复制附件内容按钮
+    const actions=document.createElement('div');actions.className='att-actions';
+    const copyBtn=document.createElement('button');copyBtn.className='action-btn';copyBtn.textContent='📋 复制内容';
+    copyBtn.addEventListener('click',e=>{
+      e.stopPropagation();
+      navigator.clipboard.writeText(a.extracted_content).then(()=>{
+        copyBtn.textContent='✅ 已复制';copyBtn.classList.add('done');
+        setTimeout(()=>{copyBtn.textContent='📋 复制内容';copyBtn.classList.remove('done');},1500);
+      }).catch(()=>{copyBtn.textContent='❌ 失败';setTimeout(()=>copyBtn.textContent='📋 复制内容',1500);});
+    });
+    actions.appendChild(copyBtn);
+    wrap.appendChild(hdr);wrap.appendChild(body);wrap.appendChild(actions);
   } else {
     wrap.appendChild(hdr);
   }
@@ -1256,40 +1690,135 @@ searchNext.addEventListener('click',()=>nextHit(1));
 
 function doSearch(){
   removeHL();srchQ=searchInput.value.trim();srchHits=[];srchCur=-1;
-  if(!srchQ){searchCount.textContent='';searchPrev.disabled=searchNext.disabled=true;return;}
+  if(!srchQ){searchCount.textContent='';searchPrev.disabled=searchNext.disabled=true;renderSrchSidebar();return;}
   const q=srchQ.toLowerCase();
-  curMsgs.forEach((m,i)=>{if(msgText(m).toLowerCase().includes(q))srchHits.push(i);});
-  if(!srchHits.length){searchCount.textContent='无结果';searchPrev.disabled=searchNext.disabled=true;return;}
-  searchPrev.disabled=searchNext.disabled=false;srchCur=0;scrollToHit(0);
+  // Occurrence-level hits: each hit = {msgIdx, occInMsg, globalOcc}
+  curMsgs.forEach((m,i)=>{
+    const txt=msgText(m).toLowerCase();
+    let pos=0,occ=0;
+    while((pos=txt.indexOf(q,pos))!==-1){
+      srchHits.push({msgIdx:i,occ:occ});
+      pos+=q.length;occ++;
+    }
+  });
+  if(!srchHits.length){searchCount.textContent='无结果';searchPrev.disabled=searchNext.disabled=true;renderSrchSidebar();return;}
+  searchPrev.disabled=searchNext.disabled=false;srchCur=0;
+  renderSrchSidebar();
+  if(!srchSidebarOpen)toggleSrchSidebar(true);
+  scrollToHit(0);
 }
 function nextHit(d){if(!srchHits.length)return;srchCur=(srchCur+d+srchHits.length)%srchHits.length;scrollToHit(srchCur);}
 function scrollToHit(i){
-  const idx=srchHits[i];searchCount.textContent=`${i+1}/${srchHits.length}`;
-  vp.scrollTop=Math.max(0,offsets[idx]-80);renderVisible();setTimeout(applyHL,120);
+  const hit=srchHits[i];if(!hit)return;
+  const idx=hit.msgIdx;
+  searchCount.textContent=`${i+1}/${srchHits.length}`;
+  if(fullRenderMode){
+    // Node is already in DOM; scroll to it directly
+    applyHL();
+    const node=rendered.get(idx);
+    if(node){
+      const r=node.getBoundingClientRect(),vpr=vp.getBoundingClientRect();
+      vp.scrollTop+=(r.top-vpr.top)-80;
+    }
+    setTimeout(scrollCurIntoView,60);
+  } else {
+    vp.scrollTop=Math.max(0,offsets[idx]-80);
+    renderVisible();
+    setTimeout(()=>{renderVisible();applyHL();scrollCurIntoView();},150);
+  }
+  // update active in sidebar
+  srchSbList.querySelectorAll('.srch-res').forEach((el,j)=>el.classList.toggle('active',j===i));
+  const activeEl=srchSbList.querySelector('.srch-res.active');
+  if(activeEl)activeEl.scrollIntoView({block:'nearest'});
 }
+function scrollCurIntoView(){
+  const curMark=vc.querySelector('mark.hl.cur');
+  if(curMark){
+    const r=curMark.getBoundingClientRect(),vpr=vp.getBoundingClientRect();
+    if(r.top<vpr.top+40||r.bottom>vpr.bottom-40){
+      vp.scrollTop+=(r.top-vpr.top)-vp.clientHeight/3;
+      requestAnimationFrame(()=>{renderVisible();applyHL();});
+    }
+  }
+}
+
+// ── v4: SEARCH SIDEBAR ──
+function renderSrchSidebar(){
+  srchSbList.innerHTML='';
+  srchSbCount.textContent=srchHits.length?`(${srchHits.length})`:'';
+  if(!srchHits.length){srchSbList.innerHTML='<div class="empty-hint" style="font-size:12px;padding:20px">无匹配结果</div>';return;}
+  const q=srchQ.toLowerCase();
+  srchHits.forEach((hit,j)=>{
+    const m=curMsgs[hit.msgIdx];
+    const txt=msgText(m);
+    // Find the position of THIS occurrence
+    const lo=txt.toLowerCase();
+    let pos=-1,c=0;
+    for(let p=0;(p=lo.indexOf(q,p))!==-1;p+=q.length){if(c===hit.occ){pos=p;break;}c++;}
+    if(pos<0)pos=lo.indexOf(q);
+    const start=Math.max(0,pos-30),end=Math.min(txt.length,pos+srchQ.length+50);
+    const before=esc(txt.slice(start,pos));
+    const match=esc(txt.slice(pos,pos+srchQ.length));
+    const after=esc(txt.slice(pos+srchQ.length,end));
+    const snip=before+'<mark>'+match+'</mark>'+after;
+    const div=document.createElement('div');div.className='srch-res'+(j===srchCur?' active':'');
+    div.innerHTML=`<div class="srch-res-head">
+      <span class="srch-res-sender ${m.sender==='human'?'human':'assistant'}">${m.sender==='human'?'You':'Claude'}</span>
+      <span class="srch-res-idx">#${hit.msgIdx+1}</span></div>
+      <div class="srch-res-snip">${(start>0?'…':'')+snip+(end<txt.length?'…':'')}</div>`;
+    div.addEventListener('click',()=>{srchCur=j;scrollToHit(j);});
+    srchSbList.appendChild(div);
+  });
+}
+function toggleSrchSidebar(force){
+  srchSidebarOpen=force!==undefined?force:!srchSidebarOpen;
+  srchSidebar.classList.toggle('open',srchSidebarOpen);
+  $('srch-toggle').classList.toggle('on',srchSidebarOpen);
+}
+$('srch-toggle').addEventListener('click',()=>toggleSrchSidebar());
+$('srch-sb-close').addEventListener('click',()=>toggleSrchSidebar(false));
 function applyHL(){
   removeHL();if(!srchQ)return;
-  const q=srchQ.toLowerCase(),curIdx=srchHits[srchCur];
-  for(const[i,node]of rendered)
-    node.querySelectorAll('.bubble,.thinking-body,.att-body').forEach(el=>hlEl(el,q,i===curIdx));
+  const q=srchQ.toLowerCase();
+  const curHit=srchHits[srchCur];
+  const curMsgIdx=curHit?curHit.msgIdx:-1;
+  const curOcc=curHit?curHit.occ:-1;
+  for(const[i,node]of rendered){
+    const isCurMsg=(i===curMsgIdx);
+    // For the current message, highlight all but mark the curOcc-th as .cur
+    node.querySelectorAll('.bubble,.thinking-body,.att-body').forEach(el=>hlEl(el,q,isCurMsg?curOcc:-1));
+  }
 }
-function hlEl(el,q,isCur){
+function hlEl(el,q,curOcc){
+  // curOcc>=0 means: within this element's message, the curOcc-th occurrence is the current one
   const walker=document.createTreeWalker(el,NodeFilter.SHOW_TEXT);
   const tns=[];let n;while((n=walker.nextNode()))tns.push(n);
+  let msgNode=el;while(msgNode&&!(msgNode.classList&&msgNode.classList.contains('msg-wrap')))msgNode=msgNode.parentNode;
+  if(msgNode&&msgNode._occCounter===undefined)msgNode._occCounter=0;
   tns.forEach(tn=>{
     const txt=tn.textContent,lo=txt.toLowerCase();if(!lo.includes(q))return;
+    const parent=tn.parentNode;if(!parent)return;
     const frag=document.createDocumentFragment();let last=0,pos;
     while((pos=lo.indexOf(q,last))!==-1){
       if(pos>last)frag.appendChild(document.createTextNode(txt.slice(last,pos)));
-      const mk=document.createElement('mark');mk.className='hl'+(isCur?' cur':'');
+      const mk=document.createElement('mark');
+      const thisOcc=msgNode?msgNode._occCounter++:-1;
+      mk.className='hl'+(curOcc>=0&&thisOcc===curOcc?' cur':'');
       mk.textContent=txt.slice(pos,pos+q.length);frag.appendChild(mk);last=pos+q.length;
     }
     if(last<txt.length)frag.appendChild(document.createTextNode(txt.slice(last)));
-    tn.parentNode.replaceChild(frag,tn);tn.parentNode.normalize();
+    parent.replaceChild(frag,tn);
   });
 }
-function removeHL(){vc.querySelectorAll('mark.hl').forEach(m=>{m.parentNode.replaceChild(document.createTextNode(m.textContent),m);m.parentNode.normalize();});}
-function clearSearch(){searchInput.value='';srchQ='';srchHits=[];srchCur=-1;searchCount.textContent='';searchPrev.disabled=searchNext.disabled=true;removeHL();}
+function removeHL(){
+  vc.querySelectorAll('.msg-wrap').forEach(m=>{m._occCounter=undefined;});
+  vc.querySelectorAll('mark.hl').forEach(m=>{
+    const parent=m.parentNode;if(!parent)return;
+    parent.replaceChild(document.createTextNode(m.textContent),m);
+    parent.normalize();
+  });
+}
+function clearSearch(){searchInput.value='';srchQ='';srchHits=[];srchCur=-1;searchCount.textContent='';searchPrev.disabled=searchNext.disabled=true;removeHL();if(srchSbList)renderSrchSidebar();}
 
 // ── EXPORT MD (single) ────────────────────────────────
 $('exp-md').addEventListener('click',()=>{
@@ -1323,6 +1852,9 @@ $('exp-pdf').addEventListener('click',()=>{
   const title=curConv.name||'conversation';
   let html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${esc(title)}</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"><\/script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"><\/script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"><\/script>
   <style>body{font-family:system-ui,sans-serif;font-size:14px;line-height:1.7;max-width:800px;margin:0 auto;padding:32px;color:#1a1a1a}
   h1{font-family:Georgia,serif;font-size:22px;margin-bottom:6px}.sub{color:#9c9590;font-size:12px;margin-bottom:32px}
   .msg{margin-bottom:20px;display:flex;flex-direction:column}.msg.human{align-items:flex-end}.msg.assistant{align-items:flex-start}
@@ -1357,7 +1889,13 @@ $('exp-pdf').addEventListener('click',()=>{
   const win=window.open('','_blank','width=900,height=700');
   if(!win){alert('请允许弹出窗口以导出PDF');return;}
   win.document.write(html);win.document.close();
-  win.addEventListener('load',()=>setTimeout(()=>win.print(),300));
+  win.addEventListener('load',()=>setTimeout(()=>{
+    try{if(win.renderMathInElement)win.renderMathInElement(win.document.body,{
+      delimiters:[{left:'$$',right:'$$',display:true},{left:'\\[',right:'\\]',display:true},
+        {left:'$',right:'$',display:false},{left:'\\(',right:'\\)',display:false}],
+      throwOnError:false,ignoredTags:['script','noscript','style','textarea','pre','code']});}catch(e){}
+    setTimeout(()=>win.print(),400);
+  },500));
 });
 
 // ── EXPORT ALL (ZIP) ──────────────────────────────────
