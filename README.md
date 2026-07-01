@@ -191,4 +191,10 @@ ClaudeViewer 渲染的是 Claude **写在正文中的 LaTeX 文本**：
 
 ---
 
+## 🗺️ 路线图
+
+想了解项目未来的发展方向？查看 [**Roadmap 路线图**](docs/ROADMAP.md)，也欢迎在 [Issues](https://github.com/crownleo/ClaudeViewer/issues) 提出你的想法。
+
+---
+
 *Claude 数据查看器 v5.1 · 个人数据，本地掌控*

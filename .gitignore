@@ -1,4 +1,5 @@
 .idea/
 /image/
 .claude/settings.local.json
-/docs/
+/docs/*
+!/docs/ROADMAP.md
