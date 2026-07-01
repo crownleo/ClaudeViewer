@@ -196,7 +196,7 @@ ClaudeViewer 渲染的是 Claude **写在正文中的 LaTeX 文本**：
 
 ## 📋 版本历史
 
-**v5.2** — **舍弃 CDN，依赖全部内联**。marked.js、JSZip、KaTeX 及其字体全部打包进单文件，页面加载零外部请求、完全离线可用，也解决了此前 CDN 在部分网络下加载慢/失败的问题。新增 `build/build.py` 构建脚本用于内联与升级依赖。
+**v5.2** — **舍弃 CDN，依赖全部内联**。marked.js、JSZip、KaTeX 及其字体全部打包进单文件，页面加载零外部请求、完全离线可用，也解决了此前 CDN 在部分网络下加载慢/失败的问题。同时项目以 **GPL-3.0** 开源，封面与运行界面加入作者署名与版权声明。
 
 **v5.1** — 在 v5.0 基础上新增**一键复制**（消息 / 思考过程 / 附件内容）与**间距优化**（防止消息重叠、思考过程完整展示），保留 v5.0 的逐次搜索与本地持久化实现。
 
@@ -224,6 +224,20 @@ ClaudeViewer 渲染的是 Claude **写在正文中的 LaTeX 文本**：
 如果这个工具帮到了你，欢迎点个 Star 支持一下 ⭐
 
 [![Star History Chart](https://api.star-history.com/svg?repos=crownleo/ClaudeViewer&type=Date)](https://star-history.com/#crownleo/ClaudeViewer&Date)
+
+---
+
+## 📄 许可证 & 署名
+
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+
+本项目以 [GNU GPL-3.0](LICENSE) 开源。你可以自由使用、学习、修改、再分发，但**必须保留版权声明与作者署名**，且衍生作品需同样以 GPL-3.0 开源。
+
+- 作者：**crownleo**　·　小红书：**kingguan4**
+- GitHub：<https://github.com/crownleo/>
+- 邮箱：wangg.chn@gmail.com
+
+© 2025 crownleo · Released under GPL-3.0
 
 ---
 

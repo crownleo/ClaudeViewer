@@ -2,6 +2,21 @@
 <html lang="zh" data-theme="light">
 <head>
 <meta charset="UTF-8">
+<!--
+  Claude 数据查看器 (ClaudeViewer)
+  Copyright (C) 2025 crownleo
+
+  作者 Author: crownleo · 小红书 Xiaohongshu: kingguan4
+  GitHub: https://github.com/crownleo/ClaudeViewer
+  Email:  wangg.chn@gmail.com
+
+  本程序为自由软件，依据 GNU 通用公共许可证第 3 版 (GPL-3.0) 授权发布。
+  你可以再分发和/或修改本程序，但必须保留上述版权与作者署名，且衍生作品须同样以 GPL-3.0 开源。
+  This program is free software under the GNU GPL v3.0. You must keep this
+  copyright notice and author attribution; derivative works must also be GPL-3.0.
+  License: https://github.com/crownleo/ClaudeViewer/blob/main/LICENSE
+-->
+<meta name="author" content="crownleo (kingguan4)">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Claude 数据查看器 v5.2</title>
 <!-- vendor:start — 本地内联依赖，零 CDN、离线可用（由 build/build.py 生成，勿手改此区块）-->
@@ -76,6 +91,13 @@ code.tag{background:var(--pl);color:var(--pd);padding:1px 7px;border-radius:4px;
 .pick-btn:hover{background:var(--pd)}
 #file-input{display:none}
 .u-note{font-size:12px;color:var(--t3);max-width:380px;text-align:center;line-height:1.7}
+.u-credit{font-size:11px;color:var(--t3);text-align:center;line-height:1.9;margin-top:10px}
+.u-credit .cr-id{font-weight:600;color:var(--t2)}
+.u-credit a{color:var(--pd);text-decoration:none}
+.u-credit a:hover{text-decoration:underline}
+.sb-credit{padding:8px 12px;font-size:10px;color:var(--t3);line-height:1.6;text-align:center;border-top:1px solid var(--bd)}
+.sb-credit a{color:var(--pd);text-decoration:none}
+.sb-credit a:hover{text-decoration:underline}
 .ver-badge{font-size:11px;background:var(--pl);color:var(--pd);padding:2px 10px;border-radius:9999px;font-weight:600}
 
 /* ── MAIN LAYOUT ── */
@@ -499,6 +521,13 @@ mark.hl.cur{background:var(--primary);color:#fff}
     <input type="file" id="file-input" accept=".json,.zip,.md,.markdown" multiple>
   </div>
   <div class="u-note">对话 · 项目 · 记忆 · 账户 · 统计 · 全局搜索 · 收藏标签 · 深色模式 · 一键复制</div>
+  <div class="u-credit">
+    作者 <span class="cr-id">crownleo</span> · 小红书 <span class="cr-id">kingguan4</span><br>
+    <a href="https://github.com/crownleo/" target="_blank" rel="noopener">GitHub</a> ·
+    <a href="mailto:wangg.chn@gmail.com">wangg.chn@gmail.com</a> ·
+    <a href="https://github.com/crownleo/ClaudeViewer/blob/main/LICENSE" target="_blank" rel="noopener">GPL-3.0</a><br>
+    © 2025 crownleo · 本工具以 GPL-3.0 开源，转载或二次开发请保留署名
+  </div>
 </div>
 
 <!-- MAIN -->
@@ -528,6 +557,9 @@ mark.hl.cur{background:var(--primary);color:#fff}
     <div id="cache-bar" style="display:none">
       <span id="cache-status">🔒 仅本次会话</span>
       <button class="cache-clear" id="cache-clear" style="display:none">清除</button>
+    </div>
+    <div class="sb-credit">
+      © 2025 <a href="https://github.com/crownleo/" target="_blank" rel="noopener">crownleo</a> · 小红书 kingguan4 · GPL-3.0
     </div>
   </div>
   <div id="content-area">

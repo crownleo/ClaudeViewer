@@ -197,7 +197,7 @@ ClaudeViewer renders the **LaTeX text Claude writes in the message body**:
 
 ## 📋 Version History
 
-**v5.2** — **Dropped CDN, all dependencies inlined.** marked.js, JSZip, KaTeX and its fonts are bundled into the single file: zero external requests on load, fully offline, and it fixes the slow/failed CDN loads some networks experienced. Added `build/build.py` for inlining and upgrading dependencies.
+**v5.2** — **Dropped CDN, all dependencies inlined.** marked.js, JSZip, KaTeX and its fonts are bundled into the single file: zero external requests on load, fully offline, and it fixes the slow/failed CDN loads some networks experienced. The project is now licensed under **GPL-3.0**, with author attribution and a copyright notice added to the cover and the running UI.
 
 **v5.1** — Added **one-click copy** (message / thinking / attachment) and **spacing improvements** (no overlapping messages, full thinking display), keeping v5.0's occurrence-level search and local persistence.
 
@@ -225,6 +225,20 @@ Curious about where the project is headed? See the [**Roadmap**](docs/ROADMAP.md
 If this tool helps you, a Star would mean a lot ⭐
 
 [![Star History Chart](https://api.star-history.com/svg?repos=crownleo/ClaudeViewer&type=Date)](https://star-history.com/#crownleo/ClaudeViewer&Date)
+
+---
+
+## 📄 License & Attribution
+
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+
+This project is open source under the [GNU GPL-3.0](LICENSE). You are free to use, study, modify, and redistribute it, but **you must keep the copyright notice and author attribution**, and derivative works must also be licensed under GPL-3.0.
+
+- Author: **crownleo**　·　Xiaohongshu: **kingguan4**
+- GitHub: <https://github.com/crownleo/>
+- Email: wangg.chn@gmail.com
+
+© 2025 crownleo · Released under GPL-3.0
 
 ---
 
