@@ -6,6 +6,13 @@
 
 一个单文件 HTML 工具，用于查看和分析从 Claude.ai 导出的个人数据。双击即用，无需服务器、无需联网、无需账号。**v5.2 起所有依赖库已内联进单文件，完全离线可用、零外部请求。**
 
+🔗 **在线体验**：<https://crownleo.github.io/ClaudeViewer/claude_viewer.html>
+📥 **下载单文件**：[最新 Release](https://github.com/crownleo/ClaudeViewer/releases/latest)　·　🗺️ [路线图](docs/ROADMAP.md)
+
+![Claude 数据查看器](image/封面.png)
+
+> 在线体验版同样在你的浏览器本地运行、不上传任何数据；如需长期使用，建议[下载单文件](https://github.com/crownleo/ClaudeViewer/releases/latest)离线保存。
+
 ---
 
 ## ✨ 功能清单
@@ -80,6 +87,16 @@
 
 ---
 
+## 📸 界面预览
+
+| 主页面 · 对话查看 | 全局搜索 |
+|---|---|
+| ![主页面](image/主页面.png) | ![全局搜索](image/搜索.png) |
+| **统计分析** | **项目** |
+| ![统计分析](image/统计.png) | ![项目](image/项目.png) |
+
+---
+
 ## 🚀 快速开始
 
 ### 第一步：获取 Claude 导出数据
@@ -142,7 +159,7 @@ ClaudeViewer 渲染的是 Claude **写在正文中的 LaTeX 文本**：
 - [marked.js 9.1.6](https://marked.js.org/) — Markdown 渲染（已内联）
 - [JSZip 3.10.1](https://stuk.github.io/jszip/) — ZIP 解析与生成（已内联）
 - [KaTeX 0.16.9](https://katex.org/) — LaTeX 公式渲染（含字体，已内联）
-- 依赖内联：三方库与 KaTeX 字体通过 `build/build.py` 内联进单文件，零 CDN；升级依赖时重跑脚本即可
+- 依赖内联：三方库与 KaTeX 字体通过本地构建脚本内联进单文件，零 CDN、完全离线
 - 混合渲染：≤500 条全渲染 / 超长虚拟滚动（绝对定位 + requestAnimationFrame）
 - 统计图表 / 热力图：内联 SVG + DOM，无第三方图表库
 - 本地持久化：IndexedDB
@@ -199,6 +216,14 @@ ClaudeViewer 渲染的是 Claude **写在正文中的 LaTeX 文本**：
 ## 🗺️ 路线图
 
 想了解项目未来的发展方向？查看 [**Roadmap 路线图**](docs/ROADMAP.md)，也欢迎在 [Issues](https://github.com/crownleo/ClaudeViewer/issues) 提出你的想法。
+
+---
+
+## ⭐ Star 趋势
+
+如果这个工具帮到了你，欢迎点个 Star 支持一下 ⭐
+
+[![Star History Chart](https://api.star-history.com/svg?repos=crownleo/ClaudeViewer&type=Date)](https://star-history.com/#crownleo/ClaudeViewer&Date)
 
 ---
 

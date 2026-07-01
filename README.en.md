@@ -6,6 +6,13 @@
 
 A single-file HTML tool for viewing and analyzing your personal data exported from Claude.ai. Double-click to use — no server, no network, no account required. **Since v5.2, all dependencies are inlined into the single file, so it works fully offline with zero external requests.**
 
+🔗 **Live demo**: <https://crownleo.github.io/ClaudeViewer/claude_viewer.html>
+📥 **Download**: [latest release](https://github.com/crownleo/ClaudeViewer/releases/latest)　·　🗺️ [Roadmap](docs/ROADMAP.md)
+
+![Claude Data Viewer](image/封面.png)
+
+> The live demo also runs entirely in your browser and uploads nothing. For long-term use, [download the single file](https://github.com/crownleo/ClaudeViewer/releases/latest) and keep it offline.
+
 ---
 
 ## ✨ Features
@@ -81,6 +88,16 @@ A single-file HTML tool for viewing and analyzing your personal data exported fr
 
 ---
 
+## 📸 Screenshots
+
+| Main page · conversation view | Global search |
+|---|---|
+| ![Main page](image/主页面.png) | ![Global search](image/搜索.png) |
+| **Statistics** | **Projects** |
+| ![Statistics](image/统计.png) | ![Projects](image/项目.png) |
+
+---
+
 ## 🚀 Quick Start
 
 ### Step 1: Get your Claude export
@@ -143,7 +160,7 @@ ClaudeViewer renders the **LaTeX text Claude writes in the message body**:
 - [marked.js 9.1.6](https://marked.js.org/) — Markdown rendering (inlined)
 - [JSZip 3.10.1](https://stuk.github.io/jszip/) — ZIP parsing & generation (inlined)
 - [KaTeX 0.16.9](https://katex.org/) — LaTeX rendering, fonts included (inlined)
-- Dependency inlining: third-party libs and KaTeX fonts are inlined into the single file via `build/build.py`, zero CDN; re-run the script when upgrading a dependency
+- Dependency inlining: third-party libs and KaTeX fonts are inlined into the single file via a local build script, zero CDN, fully offline
 - Hybrid rendering: full render ≤500 / virtual scroll for long chats (absolute positioning + requestAnimationFrame)
 - Charts / heatmap: inline SVG + DOM, no third-party chart library
 - Local persistence: IndexedDB
@@ -200,6 +217,14 @@ Core capabilities:
 ## 🗺️ Roadmap
 
 Curious about where the project is headed? See the [**Roadmap**](docs/ROADMAP.md), and feel free to share ideas in [Issues](https://github.com/crownleo/ClaudeViewer/issues).
+
+---
+
+## ⭐ Star History
+
+If this tool helps you, a Star would mean a lot ⭐
+
+[![Star History Chart](https://api.star-history.com/svg?repos=crownleo/ClaudeViewer&type=Date)](https://star-history.com/#crownleo/ClaudeViewer&Date)
 
 ---
 
