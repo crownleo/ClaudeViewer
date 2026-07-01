@@ -236,7 +236,7 @@ ClaudeViewer 渲染的是 Claude **写在正文中的 LaTeX 文本**：
 - 作者：**crownleo**　·　小红书：**kingguan4**
 - GitHub：<https://github.com/crownleo/>（问题与联系请走 [Issues](https://github.com/crownleo/ClaudeViewer/issues)）
 
-© 2025 crownleo · Released under GPL-3.0
+© 2026 crownleo · Released under GPL-3.0
 
 ---
 
