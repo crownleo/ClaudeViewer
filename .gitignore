@@ -1,4 +1,4 @@
 .idea/
 .claude/
-build/
+build/vendor/
 .DS_Store
