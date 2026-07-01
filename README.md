@@ -9,7 +9,7 @@
 🔗 **在线体验**：<https://crownleo.github.io/ClaudeViewer/claude_viewer.html>
 📥 **下载单文件**：[最新 Release](https://github.com/crownleo/ClaudeViewer/releases/latest)　·　🗺️ [路线图](docs/ROADMAP.md)
 
-![Claude 数据查看器](image/封面.png)
+<p align="center"><img src="image/封面.png" alt="Claude 数据查看器" width="520"></p>
 
 > 在线体验版同样在你的浏览器本地运行、不上传任何数据；如需长期使用，建议[下载单文件](https://github.com/crownleo/ClaudeViewer/releases/latest)离线保存。
 

@@ -9,7 +9,7 @@ A single-file HTML tool for viewing and analyzing your personal data exported fr
 🔗 **Live demo**: <https://crownleo.github.io/ClaudeViewer/claude_viewer.html>
 📥 **Download**: [latest release](https://github.com/crownleo/ClaudeViewer/releases/latest)　·　🗺️ [Roadmap](docs/ROADMAP.md)
 
-![Claude Data Viewer](image/封面.png)
+<p align="center"><img src="image/封面.png" alt="Claude Data Viewer" width="520"></p>
 
 > The live demo also runs entirely in your browser and uploads nothing. For long-term use, [download the single file](https://github.com/crownleo/ClaudeViewer/releases/latest) and keep it offline.
 
