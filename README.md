@@ -1,8 +1,10 @@
-# 🗂️ Claude 数据查看器 v5.1
+# 🗂️ Claude 数据查看器 v5.2
+
+**简体中文** · [English](README.en.md)
 
 > 本地运行 · 零安装 · 数据不离开你的设备
 
-一个单文件 HTML 工具，用于查看和分析从 Claude.ai 导出的个人数据。双击即用，无需服务器、无需网络、无需账号。
+一个单文件 HTML 工具，用于查看和分析从 Claude.ai 导出的个人数据。双击即用，无需服务器、无需联网、无需账号。**v5.2 起所有依赖库已内联进单文件，完全离线可用、零外部请求。**
 
 ---
 
@@ -127,7 +129,7 @@ ClaudeViewer 渲染的是 Claude **写在正文中的 LaTeX 文本**：
 ## 🔒 隐私说明
 
 - **完全本地运行**：所有数据仅在浏览器内处理，不经过任何服务器
-- **网络请求**：仅加载三个 CDN 库（marked.js、JSZip、KaTeX），不传输任何个人数据
+- **零外部网络请求**：v5.2 起 marked.js、JSZip、KaTeX 及其字体全部内联进单文件，打开页面不向任何 CDN 或第三方发起请求，可完全离线使用
 - **默认不持久化**：除非你主动选择「保存到本地」
 - **IndexedDB 缓存**：选择保存后数据存于此设备浏览器，仅本机可读，可随时清除
 - **localStorage 存储**：收藏列表、标签、深色模式、缓存偏好（不含对话内容）
@@ -136,10 +138,11 @@ ClaudeViewer 渲染的是 Claude **写在正文中的 LaTeX 文本**：
 
 ## 📦 技术栈
 
-- 纯原生 HTML / CSS / JavaScript，无框架，无构建工具
-- [marked.js 9.1.6](https://marked.js.org/) — Markdown 渲染
-- [JSZip 3.10.1](https://stuk.github.io/jszip/) — ZIP 解析与生成
-- [KaTeX 0.16.9](https://katex.org/) — LaTeX 公式渲染
+- 纯原生 HTML / CSS / JavaScript，无框架
+- [marked.js 9.1.6](https://marked.js.org/) — Markdown 渲染（已内联）
+- [JSZip 3.10.1](https://stuk.github.io/jszip/) — ZIP 解析与生成（已内联）
+- [KaTeX 0.16.9](https://katex.org/) — LaTeX 公式渲染（含字体，已内联）
+- 依赖内联：三方库与 KaTeX 字体通过 `build/build.py` 内联进单文件，零 CDN；升级依赖时重跑脚本即可
 - 混合渲染：≤500 条全渲染 / 超长虚拟滚动（绝对定位 + requestAnimationFrame）
 - 统计图表 / 热力图：内联 SVG + DOM，无第三方图表库
 - 本地持久化：IndexedDB
@@ -176,6 +179,8 @@ ClaudeViewer 渲染的是 Claude **写在正文中的 LaTeX 文本**：
 
 ## 📋 版本历史
 
+**v5.2** — **舍弃 CDN，依赖全部内联**。marked.js、JSZip、KaTeX 及其字体全部打包进单文件，页面加载零外部请求、完全离线可用，也解决了此前 CDN 在部分网络下加载慢/失败的问题。新增 `build/build.py` 构建脚本用于内联与升级依赖。
+
 **v5.1** — 在 v5.0 基础上新增**一键复制**（消息 / 思考过程 / 附件内容）与**间距优化**（防止消息重叠、思考过程完整展示），保留 v5.0 的逐次搜索与本地持久化实现。
 
 **v5.0** — 稳定整合发布。在 v4 系列全部功能基础上，包含 LaTeX 公式渲染、混合渲染模式、逐次搜索匹配、不支持组件友好提示等，作为重大里程碑版本发布。
@@ -187,7 +192,7 @@ ClaudeViewer 渲染的是 Claude **写在正文中的 LaTeX 文本**：
 - 管理：收藏、标签、深色模式、IndexedDB 本地持久化
 - 导出：单条 Markdown/PDF（含公式）、全部对话批量 ZIP
 
-> 演进脉络：v1 对话查看与虚拟滚动 → v2 ZIP 导入与多类型数据 → v3 全局搜索与统计 → v4 搜索侧边栏、热力图、本地持久化、LaTeX、混合渲染 → v5 稳定整合发布 → v5.1 一键复制与间距优化。
+> 演进脉络：v1 对话查看与虚拟滚动 → v2 ZIP 导入与多类型数据 → v3 全局搜索与统计 → v4 搜索侧边栏、热力图、本地持久化、LaTeX、混合渲染 → v5 稳定整合发布 → v5.1 一键复制与间距优化 → v5.2 舍弃 CDN、依赖内联。
 
 ---
 
@@ -197,4 +202,4 @@ ClaudeViewer 渲染的是 Claude **写在正文中的 LaTeX 文本**：
 
 ---
 
-*Claude 数据查看器 v5.1 · 个人数据，本地掌控*
+*Claude 数据查看器 v5.2 · 个人数据，本地掌控*
