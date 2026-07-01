@@ -235,8 +235,7 @@ If this tool helps you, a Star would mean a lot ⭐
 This project is open source under the [GNU GPL-3.0](LICENSE). You are free to use, study, modify, and redistribute it, but **you must keep the copyright notice and author attribution**, and derivative works must also be licensed under GPL-3.0.
 
 - Author: **crownleo**　·　Xiaohongshu: **kingguan4**
-- GitHub: <https://github.com/crownleo/>
-- Email: wangg.chn@gmail.com
+- GitHub: <https://github.com/crownleo/> (reach out via [Issues](https://github.com/crownleo/ClaudeViewer/issues))
 
 © 2025 crownleo · Released under GPL-3.0
 
