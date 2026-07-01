@@ -159,7 +159,7 @@ ClaudeViewer 渲染的是 Claude **写在正文中的 LaTeX 文本**：
 - [marked.js 9.1.6](https://marked.js.org/) — Markdown 渲染（已内联）
 - [JSZip 3.10.1](https://stuk.github.io/jszip/) — ZIP 解析与生成（已内联）
 - [KaTeX 0.16.9](https://katex.org/) — LaTeX 公式渲染（含字体，已内联）
-- 依赖内联：三方库与 KaTeX 字体通过本地构建脚本内联进单文件，零 CDN、完全离线
+- 依赖内联：三方库与 KaTeX 字体通过 [`build/build.py`](build/build.py) 内联进单文件，零 CDN、完全离线；升级依赖时重跑脚本即可
 - 混合渲染：≤500 条全渲染 / 超长虚拟滚动（绝对定位 + requestAnimationFrame）
 - 统计图表 / 热力图：内联 SVG + DOM，无第三方图表库
 - 本地持久化：IndexedDB

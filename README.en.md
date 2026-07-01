@@ -160,7 +160,7 @@ ClaudeViewer renders the **LaTeX text Claude writes in the message body**:
 - [marked.js 9.1.6](https://marked.js.org/) — Markdown rendering (inlined)
 - [JSZip 3.10.1](https://stuk.github.io/jszip/) — ZIP parsing & generation (inlined)
 - [KaTeX 0.16.9](https://katex.org/) — LaTeX rendering, fonts included (inlined)
-- Dependency inlining: third-party libs and KaTeX fonts are inlined into the single file via a local build script, zero CDN, fully offline
+- Dependency inlining: third-party libs and KaTeX fonts are inlined into the single file via [`build/build.py`](build/build.py), zero CDN, fully offline; re-run the script to upgrade a dependency
 - Hybrid rendering: full render ≤500 / virtual scroll for long chats (absolute positioning + requestAnimationFrame)
 - Charts / heatmap: inline SVG + DOM, no third-party chart library
 - Local persistence: IndexedDB
