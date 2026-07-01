@@ -1,5 +1,3 @@
 .idea/
-/image/
-.claude/settings.local.json
-/docs/*
-!/docs/ROADMAP.md
+.claude/
+build/vendor/
