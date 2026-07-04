@@ -2,3 +2,4 @@
 .claude/
 build/vendor/
 .DS_Store
+_local/
