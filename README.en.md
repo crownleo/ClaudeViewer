@@ -1,4 +1,4 @@
-# 🗂️ Claude Data Viewer v5.2
+# 🗂️ Claude Data Viewer v5.3
 
 [简体中文](README.md) · **English**
 
@@ -191,11 +191,13 @@ ClaudeViewer renders the **LaTeX text Claude writes in the message body**:
 | `memories.json` | Project memory data (view under the corresponding project in the "Projects" tab) |
 | `projects/{uuid}.json` | Project metadata (name, system prompt, docs) |
 
-> Global memory is what Claude remembers about you across conversations. It isn't in the standard export — export it separately as `.md` from the Claude UI and import it into the viewer's "Memory" tab.
+> Personal (global) memory is what Claude remembers about you across conversations. It lives in the export's `memories.json` and shows in the "Memory" tab automatically after importing the ZIP. You can also import your own extra `.md` memory files.
 
 ---
 
 ## 📋 Version History
+
+**v5.3** — Three features: ① **Personal memory** — the global personal memory in the export's `memories.json` now shows directly in the "Memory" tab (previously ignored); ② **Tool-call rendering** — `tool_use`/`tool_result` (web search, code analysis, MCP, …) render as collapsible blocks, fixing missing content in tool-using conversations; ③ **Conversation navigator** — a right-edge rail keyed by your questions, hover to expand, click to jump (ChatGPT-style).
 
 **v5.2** — **Dropped CDN, all dependencies inlined.** marked.js, JSZip, KaTeX and its fonts are bundled into the single file: zero external requests on load, fully offline, and it fixes the slow/failed CDN loads some networks experienced. The project is now licensed under **GPL-3.0**, with author attribution and a copyright notice added to the cover and the running UI.
 
@@ -210,7 +212,7 @@ Core capabilities:
 - Management: favorites, tags, dark mode, IndexedDB persistence
 - Export: single Markdown/PDF (with formulas), batch ZIP of all conversations
 
-> Evolution: v1 conversation viewing & virtual scroll → v2 ZIP import & multi-type data → v3 global search & statistics → v4 search sidebar, heatmap, local persistence, LaTeX, hybrid rendering → v5 stable consolidation → v5.1 one-click copy & spacing → v5.2 drop CDN, inline dependencies.
+> Evolution: v1 conversation viewing & virtual scroll → v2 ZIP import & multi-type data → v3 global search & statistics → v4 search sidebar, heatmap, local persistence, LaTeX, hybrid rendering → v5 stable consolidation → v5.1 one-click copy & spacing → v5.2 drop CDN, inline dependencies → v5.3 personal memory, tool calls, conversation navigator.
 
 ---
 
@@ -241,4 +243,4 @@ This project is open source under the [GNU GPL-3.0](LICENSE). You are free to us
 
 ---
 
-*Claude Data Viewer v5.2 · Your data, under your control*
+*Claude Data Viewer v5.3 · Your data, under your control*

@@ -17,7 +17,7 @@
 -->
 <meta name="author" content="crownleo (kingguan4)">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Claude 数据查看器 v5.2</title>
+<title>Claude 数据查看器 v5.3</title>
 <!-- vendor:start — 本地内联依赖，零 CDN、离线可用（由 build/build.py 生成，勿手改此区块）-->
 <script>/* JSZip 3.10.1 *//*!
 
@@ -313,6 +313,9 @@ code.tag{background:var(--pl);color:var(--pd);padding:1px 7px;border-radius:4px;
   white-space:pre-wrap;font-style:italic;max-height:none;overflow-y:auto}
 .thinking-body.open{display:block}
 .thinking-block + .bubble{margin-top:8px}
+/* v5.3: 工具/MCP 调用块 —— 复用思考块样式，正文用等宽体、去斜体 */
+.tool-block .thinking-body{font-style:normal;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;line-height:1.55}
+.tool-block .thinking-toggle{color:var(--pd)}
 
 /* Attachments */
 .att-block{margin-top:6px;border-radius:10px;border:1px solid var(--bd);
@@ -391,6 +394,23 @@ mark.hl.cur{background:var(--primary);color:#fff}
 #srch-sidebar{width:0;flex-shrink:0;background:var(--sur);border-left:1px solid var(--bd);
   overflow:hidden;transition:width .2s;display:flex;flex-direction:column}
 #srch-sidebar.open{width:260px}
+/* v5.3: 对话导航条 —— 折叠为竖排刻度，悬停展开为提问列表 */
+#nav-rail{position:absolute;top:10px;right:6px;bottom:44px;width:12px;z-index:20;
+  display:flex;flex-direction:column;gap:2px;padding:4px 2px;
+  opacity:.55;transition:opacity .15s,width .15s;overflow:hidden}
+#nav-rail:empty{display:none}
+#srch-sidebar.open ~ #nav-rail{display:none}
+#nav-rail:hover{opacity:1;width:250px;overflow-y:auto;padding:6px;gap:1px;
+  background:var(--sur);border:1px solid var(--bd);border-radius:10px;box-shadow:0 6px 22px var(--sh)}
+.nav-tick{flex:1 1 0;min-height:2px;max-height:6px;border-radius:2px;background:var(--t3);
+  opacity:.5;cursor:pointer;overflow:hidden;color:transparent;transition:opacity .1s,background .1s}
+.nav-tick:hover{opacity:.9}
+.nav-tick.cur{background:var(--pd);opacity:1}
+#nav-rail:hover .nav-tick{flex:0 0 auto;max-height:none;min-height:0;height:auto;background:transparent;
+  opacity:1;color:var(--t2);font-size:11px;line-height:1.4;padding:5px 8px;border-radius:6px;
+  white-space:nowrap;text-overflow:ellipsis;border-left:2px solid transparent}
+#nav-rail:hover .nav-tick:hover{background:var(--sand)}
+#nav-rail:hover .nav-tick.cur{background:var(--pl);color:var(--pd);border-left-color:var(--pd)}
 .srch-sb-head{padding:9px 12px;border-bottom:1px solid var(--bd);
   font-size:12px;font-weight:600;color:var(--t2);display:flex;
   align-items:center;justify-content:space-between;flex-shrink:0}
@@ -509,7 +529,7 @@ mark.hl.cur{background:var(--primary);color:#fff}
   <div class="u-logo">🗂️</div>
   <div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px">
     <div class="u-title">Claude 数据查看器</div>
-    <div class="ver-badge" id="ver-badge">v5.2</div>
+    <div class="ver-badge" id="ver-badge">v5.3</div>
     <div class="u-sub">数据完全本地处理 · 不上传任何内容</div>
   </div>
   <div class="drop-zone" id="drop-zone">
@@ -519,7 +539,7 @@ mark.hl.cur{background:var(--primary);color:#fff}
     <label for="file-input" class="pick-btn" id="pick-label">选择文件</label>
     <input type="file" id="file-input" accept=".json,.zip,.md,.markdown" multiple>
   </div>
-  <div class="u-note">对话 · 项目 · 记忆 · 账户 · 统计 · 全局搜索 · 收藏标签 · 深色模式 · 一键复制</div>
+  <div class="u-note">对话 · 项目 · 记忆 · 账户 · 统计 · 全局搜索 · 收藏标签 · 深色模式 · 一键复制 · 工具调用 · 对话导航</div>
   <div class="u-credit">
     作者 <span class="cr-id">crownleo</span> · 小红书 <span class="cr-id">kingguan4</span><br>
     <a href="https://github.com/crownleo/" target="_blank" rel="noopener">GitHub</a> ·
@@ -593,6 +613,7 @@ mark.hl.cur{background:var(--primary);color:#fff}
           </div>
           <div class="srch-sb-list" id="srch-sb-list"></div>
         </div>
+        <div id="nav-rail" title="对话导航：每条提问一个刻度，悬停展开，点击跳转"></div>
       </div>
     </div>
   </div>
@@ -621,7 +642,7 @@ mark.hl.cur{background:var(--primary);color:#fff}
 (function(){
 'use strict';
 // ── 版本号（发版只改这一处，标题与徽章自动同步）──
-const APP_VERSION='v5.2';
+const APP_VERSION='v5.3';
 document.title='Claude 数据查看器 '+APP_VERSION;
 document.addEventListener('DOMContentLoaded',()=>{const b=document.getElementById('ver-badge');if(b)b.textContent=APP_VERSION;});
 if(typeof marked!=='undefined')marked.setOptions({breaks:true,gfm:true});
@@ -1353,6 +1374,9 @@ function renderMemoriesList(){
   staticPanel.style.display='block';detailView.style.display='none';
   const scroll=sbScroll;scroll.innerHTML='';
   const items=[];
+  // v5.3: 个人记忆来自导出 memories.json 的 conversations_memory
+  const cm=appData.memories&&appData.memories.conversations_memory;
+  if(cm&&cm.trim())items.push({id:'personal',label:'🧠 个人记忆',type:'personal'});
   if(appData.globalMemory&&appData.globalMemory.length)
     appData.globalMemory.forEach((m,i)=>items.push({id:'g'+i,label:'🌐 '+m.filename.replace(/\.md$/i,''),type:'global',idx:i}));
   // Import button
@@ -1371,10 +1395,11 @@ function renderMemoriesList(){
   importBtn.appendChild(mdInput);importWrap.appendChild(importBtn);scroll.appendChild(importWrap);
   const pmCount=Object.keys((appData.memories&&appData.memories.project_memories)||{}).length;
   if(!items.length){
-    scroll.insertAdjacentHTML('beforeend','<div class="empty-hint" style="font-size:12px">尚未导入全局记忆</div>');
-    staticPanel.innerHTML=`<div class="panel-title">🧠 全局记忆</div>
+    scroll.insertAdjacentHTML('beforeend','<div class="empty-hint" style="font-size:12px">暂无记忆数据</div>');
+    staticPanel.innerHTML=`<div class="panel-title">🧠 记忆</div>
       <div class="section-card"><div class="sc-body">
-      全局记忆是 Claude 跨对话记住的关于你的信息。它不在标准导出包内，需在 Claude 界面单独导出为 <code>.md</code> 文件后，点击左侧「＋ 导入全局记忆 .md」导入查看。
+      <strong>个人记忆</strong>（Claude 跨对话记住的关于你的信息）就在导出包的 <code>memories.json</code> 里，导入 ZIP 后会自动显示在这里；本次数据未包含。<br><br>
+      你也可以点击左侧「＋ 导入全局记忆 .md」，导入额外的 <code>.md</code> 记忆文件。
       ${pmCount?`<br><br>💡 你的数据包含 ${pmCount} 个<strong>项目记忆</strong>，已归入 <strong>📁 项目</strong> 标签页对应项目下查看。`:''}
       </div></div>`;
     return;
@@ -1397,6 +1422,13 @@ function renderMemoriesList(){
 
 function renderMemoryPanel(item){
   staticPanel.style.display='block';detailView.style.display='none';
+  if(item.type==='personal'){
+    const txt=(appData.memories&&appData.memories.conversations_memory)||'';
+    staticPanel.innerHTML=`<div class="panel-title">🧠 个人记忆</div>
+      <div class="section-card"><div class="sc-body" style="font-size:12px;color:var(--t3);margin-bottom:8px">Claude 跨对话记住的关于你的信息（来自导出 <code>memories.json</code>）</div>
+      <div class="mem-md">${marked.parse(txt)}</div></div>`;
+    return;
+  }
   const m=appData.globalMemory[item.idx];
   staticPanel.innerHTML=`<div class="panel-title" style="display:flex;align-items:center;justify-content:space-between">
     <span>🌐 ${esc(m.filename.replace(/\.md$/i,''))}</span>
@@ -1447,8 +1479,39 @@ function openConv(uuid,callback){
   curMsgs=(raw.chat_messages||[]).filter(m=>msgText(m).trim());
   detailTitle.textContent=raw.name||raw.summary||'（无标题对话）';
   clearSearch();initVS();showDetail(true);vp.scrollTop=0;
-  toggleSrchSidebar(false);updateScrollBtns();
+  toggleSrchSidebar(false);updateScrollBtns();buildNavRail();
   if(_openCallback)setTimeout(()=>{_openCallback();_openCallback=null;},150);
+}
+
+// ── v5.3: 对话导航条 ───────────────────────────────────
+function buildNavRail(){
+  const rail=$('nav-rail');if(!rail)return;
+  rail.innerHTML='';
+  const qs=[];
+  curMsgs.forEach((m,i)=>{if(m.sender==='human'){const t=msgText(m).trim();if(t)qs.push({idx:i,text:t});}});
+  if(qs.length<2)return; // 提问太少不显示
+  qs.forEach(q=>{
+    const tick=document.createElement('div');tick.className='nav-tick';
+    tick.dataset.idx=q.idx;
+    tick.textContent=q.text.replace(/\s+/g,' ').slice(0,80);
+    tick.title=q.text.slice(0,200);
+    tick.addEventListener('click',()=>jumpToMsg(q.idx));
+    rail.appendChild(tick);
+  });
+  updateNavCurrent();
+}
+function msgTop(idx){
+  if(!fullRenderMode)return offsets[idx]||0;
+  const node=rendered.get(idx);return node?node.offsetTop:0;
+}
+function updateNavCurrent(){
+  const rail=$('nav-rail');if(!rail||!rail.children.length)return;
+  const st=vp.scrollTop+90;let cur=-1;
+  const ticks=rail.children;
+  for(let k=0;k<ticks.length;k++){
+    if(msgTop(parseInt(ticks[k].dataset.idx))<=st)cur=k;else break;
+  }
+  for(let k=0;k<ticks.length;k++)ticks[k].classList.toggle('cur',k===cur);
 }
 
 // ── RENDER MODE: full vs virtual ───────────────────────
@@ -1518,7 +1581,7 @@ function renderVisible(){
   if(srchQ)applyHL();
 }
 let rafPending=false;
-vp.addEventListener('scroll',()=>{if(!rafPending){rafPending=true;requestAnimationFrame(()=>{renderVisible();updateScrollBtns();rafPending=false;})}});
+vp.addEventListener('scroll',()=>{if(!rafPending){rafPending=true;requestAnimationFrame(()=>{renderVisible();updateScrollBtns();updateNavCurrent();rafPending=false;})}});
 
 // ── v4: SCROLL BUTTONS ──
 function updateScrollBtns(){
@@ -1545,6 +1608,8 @@ function buildMsg(msg,idx){
   inner.appendChild(meta);
   // Thinking
   if(!isH)(msg.content||[]).filter(b=>b.type==='thinking').forEach(b=>inner.appendChild(buildThinking(b)));
+  // v5.3: 工具 / MCP 调用块（tool_use / tool_result）
+  (msg.content||[]).filter(b=>b.type==='tool_use'||b.type==='tool_result').forEach(b=>inner.appendChild(buildToolBlock(b)));
   // Text bubble
   let textContent=(msg.content||[]).filter(b=>b.type==='text').map(b=>b.text||'').join('\n').trim()||msg.text||'';
   textContent=replaceUnsupportedBlocks(textContent);
@@ -1661,6 +1726,48 @@ function enhanceCodeBlocks(container){
   });
 }
 
+// v5.3: 折叠块展开/收起后，通知虚拟滚动重算该消息高度（复用于思考块与工具块）
+function reflowMsgHeight(wrap){
+  if(fullRenderMode)return;
+  requestAnimationFrame(()=>{
+    const msgWrap=wrap.closest('.msg-wrap');
+    if(!msgWrap)return;
+    const i=parseInt(msgWrap.dataset.idx);
+    if(isNaN(i)||heights[i]===undefined)return;
+    const newH=msgWrap.offsetHeight;
+    if(newH>0&&newH!==heights[i]){
+      heights[i]=newH;recomputeOffsets();vc.style.height=totalH+'px';
+      for(const[j,n]of rendered)n.style.top=offsets[j]+'px';
+    }
+  });
+}
+
+// v5.3: 工具 / MCP 调用块（tool_use / tool_result），默认折叠
+function toolInputText(b){try{return JSON.stringify(b.input,null,2);}catch{return String(b.input||'');}}
+function toolResultText(b){
+  const c=b.content;
+  if(typeof c==='string')return c;
+  if(Array.isArray(c))return c.map(x=>x&&x.type==='text'?(x.text||''):(typeof x==='string'?x:JSON.stringify(x))).join('\n');
+  if(c==null)return'';
+  return JSON.stringify(c,null,2);
+}
+function buildToolBlock(b){
+  const isUse=b.type==='tool_use';
+  const wrap=document.createElement('div');wrap.className='thinking-block tool-block';
+  const toggle=document.createElement('div');toggle.className='thinking-toggle';
+  const arrow=document.createElement('span');arrow.className='ti';arrow.textContent='▶';
+  const label=document.createElement('span');label.style.fontWeight='500';
+  label.textContent=isUse?('🔧 工具调用'+(b.name?'：'+b.name:'')):'↩ 工具结果'+(b.is_error?'（错误）':'');
+  toggle.appendChild(arrow);toggle.appendChild(label);
+  const body=document.createElement('div');body.className='thinking-body';
+  body.textContent=isUse?toolInputText(b):toolResultText(b);
+  toggle.addEventListener('click',()=>{
+    const o=body.classList.toggle('open');toggle.classList.toggle('open',o);
+    reflowMsgHeight(wrap);
+  });
+  wrap.appendChild(toggle);wrap.appendChild(body);return wrap;
+}
+
 function buildThinking(b){
   const wrap=document.createElement('div');wrap.className='thinking-block';
   const toggle=document.createElement('div');toggle.className='thinking-toggle';
@@ -1684,18 +1791,7 @@ function buildThinking(b){
   actions.appendChild(copyBtn);
   toggle.addEventListener('click',()=>{
     const o=body.classList.toggle('open');toggle.classList.toggle('open',o);
-    // 展开/收起后通知虚拟滚动重算高度（仅虚拟滚动模式下需要）
-    if(!fullRenderMode)requestAnimationFrame(()=>{
-      const msgWrap=wrap.closest('.msg-wrap');
-      if(!msgWrap)return;
-      const i=parseInt(msgWrap.dataset.idx);
-      if(isNaN(i)||heights[i]===undefined)return;
-      const newH=msgWrap.offsetHeight;
-      if(newH>0&&newH!==heights[i]){
-        heights[i]=newH;recomputeOffsets();vc.style.height=totalH+'px';
-        for(const[j,n]of rendered)n.style.top=offsets[j]+'px';
-      }
-    });
+    reflowMsgHeight(wrap);
   });
   wrap.appendChild(toggle);wrap.appendChild(body);wrap.appendChild(actions);return wrap;
 }
@@ -1760,24 +1856,24 @@ function doSearch(){
   scrollToHit(0);
 }
 function nextHit(d){if(!srchHits.length)return;srchCur=(srchCur+d+srchHits.length)%srchHits.length;scrollToHit(srchCur);}
+// v5.3: 跳转到某条消息（两种渲染模式通用），供搜索与导航条复用
+function jumpToMsg(idx){
+  if(idx<0||idx>=curMsgs.length)return;
+  if(fullRenderMode){
+    const node=rendered.get(idx);
+    if(node){const r=node.getBoundingClientRect(),vpr=vp.getBoundingClientRect();vp.scrollTop+=(r.top-vpr.top)-80;}
+  }else{
+    vp.scrollTop=Math.max(0,(offsets[idx]||0)-80);
+    renderVisible();
+  }
+}
 function scrollToHit(i){
   const hit=srchHits[i];if(!hit)return;
   const idx=hit.msgIdx;
   searchCount.textContent=`${i+1}/${srchHits.length}`;
-  if(fullRenderMode){
-    // Node is already in DOM; scroll to it directly
-    applyHL();
-    const node=rendered.get(idx);
-    if(node){
-      const r=node.getBoundingClientRect(),vpr=vp.getBoundingClientRect();
-      vp.scrollTop+=(r.top-vpr.top)-80;
-    }
-    setTimeout(scrollCurIntoView,60);
-  } else {
-    vp.scrollTop=Math.max(0,offsets[idx]-80);
-    renderVisible();
-    setTimeout(()=>{renderVisible();applyHL();scrollCurIntoView();},150);
-  }
+  jumpToMsg(idx);
+  if(fullRenderMode){applyHL();setTimeout(scrollCurIntoView,60);}
+  else setTimeout(()=>{renderVisible();applyHL();scrollCurIntoView();},150);
   // update active in sidebar
   srchSbList.querySelectorAll('.srch-res').forEach((el,j)=>el.classList.toggle('active',j===i));
   const activeEl=srchSbList.querySelector('.srch-res.active');
