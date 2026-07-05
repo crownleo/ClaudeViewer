@@ -222,26 +222,6 @@ code.tag{background:var(--pl);color:var(--pd);padding:1px 7px;border-radius:4px;
   border:1px solid var(--bd);border-radius:9999px;background:var(--sur);color:var(--t2);
   font-size:13px;cursor:pointer;font-family:inherit;align-self:flex-start;flex:0 0 auto}
 .m-back:hover{border-color:var(--primary);color:var(--pd)}
-/* v5.4: 移动端主从布局 —— 列表全宽 ↔ 详情全宽 */
-@media(max-width:768px){
-  #sidebar{width:100%;min-width:0;border-right:none}
-  #content-area{width:100%}
-  /* flexbox: 允许收缩到视口宽度，杜绝横向溢出 */
-  #content-area,#detail-view,#detail-body,.messages-vp,#detail-title{min-width:0}
-  #main-screen.detail-open #sidebar{display:none}
-  #main-screen:not(.detail-open) #content-area{display:none}
-  #nav-rail{display:none}
-  #srch-sidebar.open{position:absolute;top:0;right:0;bottom:0;width:100%;z-index:30}
-  #static-panel{padding:14px}
-  .stat-grid{grid-template-columns:1fr 1fr}
-  .section-card{overflow-x:auto}
-  .detail-header{padding:8px 10px;gap:6px}
-  #detail-title{font-size:13px}
-  .exp-btn,#back-btn,.srch-toggle-btn{padding:6px 9px;font-size:12px}
-  .search-bar{padding:6px 10px;flex-wrap:wrap}
-  .drop-zone{padding:26px 20px}
-  #main-screen.detail-open:not(.conv-detail) .m-back{display:inline-flex}
-}
 .chart-title{font-weight:600;font-size:14px;color:var(--t1);margin-bottom:16px}
 .top-convs{border-collapse:collapse;width:100%;font-size:13px}
 .top-convs th{text-align:left;padding:6px 10px;color:var(--t3);
@@ -540,6 +520,26 @@ mark.hl.cur{background:var(--primary);color:#fff}
 .modal-check{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--t3);cursor:pointer}
 .modal-note{font-size:11px;color:var(--t3);margin-top:10px;line-height:1.5;
   background:var(--bg);padding:8px 11px;border-radius:8px}
+
+/* v5.4: 移动端主从布局（放在所有基础样式之后，确保覆盖生效）*/
+@media(max-width:768px){
+  #sidebar{width:100%;min-width:0;border-right:none}
+  #content-area{width:100%}
+  #content-area,#detail-view,#detail-body,.messages-vp,#detail-title{min-width:0}
+  #main-screen.detail-open #sidebar{display:none}
+  #main-screen:not(.detail-open) #content-area{display:none}
+  #nav-rail{display:none!important}
+  #srch-sidebar.open{position:absolute;top:0;right:0;bottom:0;width:100%;z-index:30}
+  #static-panel{padding:14px}
+  .stat-grid{grid-template-columns:1fr 1fr}
+  .section-card{overflow-x:auto}
+  .detail-header{padding:8px 10px;gap:6px}
+  #detail-title{font-size:13px}
+  .exp-btn,#back-btn,.srch-toggle-btn{padding:6px 9px;font-size:12px}
+  .search-bar{padding:6px 10px;flex-wrap:wrap}
+  .drop-zone{padding:26px 20px}
+  #main-screen.detail-open:not(.conv-detail) .m-back{display:inline-flex}
+}
 
 /* Print */
 @media print{
