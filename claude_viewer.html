@@ -88,6 +88,9 @@ code.tag{background:var(--pl);color:var(--pd);padding:1px 7px;border-radius:4px;
   padding:10px 28px;border-radius:9999px;cursor:pointer;font-size:14px;
   font-weight:500;border:none;transition:background .15s;box-shadow:0 2px 8px rgba(217,119,87,.3)}
 .pick-btn:hover{background:var(--pd)}
+.demo-btn{margin-top:14px;background:transparent;border:1px dashed var(--bd);color:var(--t3);
+  padding:8px 18px;border-radius:9999px;cursor:pointer;font-size:12px;font-family:inherit;transition:all .15s}
+.demo-btn:hover{border-color:var(--primary);color:var(--pd);background:var(--pl)}
 #file-input{display:none}
 .u-note{font-size:12px;color:var(--t3);max-width:380px;text-align:center;line-height:1.7}
 .u-credit{font-size:11px;color:var(--t3);text-align:center;line-height:1.9;margin-top:10px}
@@ -539,6 +542,7 @@ mark.hl.cur{background:var(--primary);color:#fff}
     <label for="file-input" class="pick-btn" id="pick-label">选择文件</label>
     <input type="file" id="file-input" accept=".json,.zip,.md,.markdown" multiple>
   </div>
+  <button id="demo-btn" class="demo-btn" type="button">✨ 没有数据？载入示例数据体验</button>
   <div class="u-note">对话 · 项目 · 记忆 · 账户 · 统计 · 全局搜索 · 收藏标签 · 深色模式 · 一键复制 · 工具调用 · 对话导航</div>
   <div class="u-credit">
     作者 <span class="cr-id">crownleo</span> · 小红书 <span class="cr-id">kingguan4</span><br>
@@ -643,6 +647,7 @@ mark.hl.cur{background:var(--primary);color:#fff}
 'use strict';
 // ── 版本号（发版只改这一处，标题与徽章自动同步）──
 const APP_VERSION='v5.3';
+const DEMO_DATA={"account": {"uuid": "demo-user", "full_name": "小柯（示例）", "email_address": "demo@claudeviewer.app", "verified_phone_number": null}, "memories": {"conversations_memory": "**关于你**\n\n小柯是一名产品设计师，喜欢简洁好用的工具，日常用 Claude 处理写作、翻译、代码片段和资料整理。\n\n**偏好**\n\n喜欢极简设计与开源工具，习惯把重要对话本地存档；使用 Mac，偏好深色模式。\n\n**最近在做**\n\n在整理与 AI 的历史对话，寻找能本地打开、搜索、导出的管理方式，看重「数据不上传、完全本地」。", "project_memories": {"proj-1": "该项目用于产品设计咨询：小柯常问交互流程、文案措辞与竞品分析，偏好直接给结论。"}, "account_uuid": "demo-user"}, "projects": [{"uuid": "proj-1", "name": "产品设计助手", "description": "日常设计工作的 AI 助手", "is_private": true, "is_starter_project": false, "prompt_template": "你是一位资深产品设计顾问，回答简洁、给结论、必要时配一句理由。", "created_at": "2026-06-01T08:00:00+00:00", "updated_at": "2026-06-10T08:00:00+00:00", "creator": {"uuid": "demo-user", "full_name": "小柯（示例）"}, "docs": [{"uuid": "doc-1", "filename": "设计规范.md", "content": "# 设计规范\n\n- 主色：暖橙 #D97757\n- 圆角：12px\n- 原则：留白充足、层级清晰", "created_at": "2026-06-01T08:05:00+00:00"}]}], "convs": [{"uuid": "conv-a", "name": "二次方程与判别式", "summary": "", "created_at": "2026-06-20T09:00:00+00:00", "updated_at": "2026-06-20T09:03:16+00:00", "account": {"uuid": "demo-user"}, "chat_messages": [{"uuid": "m281733", "sender": "human", "created_at": "2026-06-20T09:00:00+00:00", "updated_at": "2026-06-20T09:00:00+00:00", "text": "帮我用公式解释一下二次方程的求根公式", "content": [{"type": "text", "text": "帮我用公式解释一下二次方程的求根公式"}], "files": [], "attachments": [], "parent_message_uuid": null}, {"uuid": "m484231", "sender": "assistant", "created_at": "2026-06-20T09:00:12+00:00", "updated_at": "2026-06-20T09:00:12+00:00", "text": "", "content": [{"type": "thinking", "thinking": "用户想了解二次方程求根公式。我用标准 LaTeX 写出公式并解释判别式，保持简洁。"}, {"type": "text", "text": "二次方程 $ax^2+bx+c=0$（$a\\neq 0$）的求根公式是：\n\n$$x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}$$\n\n其中根号里的 $b^2-4ac$ 叫**判别式**，通常记作 $\\Delta$。"}], "files": [], "attachments": [], "parent_message_uuid": null}, {"uuid": "m774674", "sender": "human", "created_at": "2026-06-20T09:01:00+00:00", "updated_at": "2026-06-20T09:01:00+00:00", "text": "判别式有什么用", "content": [{"type": "text", "text": "判别式有什么用"}], "files": [], "attachments": [], "parent_message_uuid": null}, {"uuid": "m747240", "sender": "assistant", "created_at": "2026-06-20T09:01:20+00:00", "updated_at": "2026-06-20T09:01:20+00:00", "text": "", "content": [{"type": "text", "text": "判别式 $\\Delta=b^2-4ac$ 决定根的情况：\n\n- $\\Delta>0$：两个不同实根\n- $\\Delta=0$：一个重根\n- $\\Delta<0$：两个共轭复根"}], "files": [], "attachments": [], "parent_message_uuid": null}, {"uuid": "m470454", "sender": "human", "created_at": "2026-06-20T09:02:00+00:00", "updated_at": "2026-06-20T09:02:00+00:00", "text": "举个 Δ 小于 0 的例子", "content": [{"type": "text", "text": "举个 Δ 小于 0 的例子"}], "files": [], "attachments": [], "parent_message_uuid": null}, {"uuid": "m616680", "sender": "assistant", "created_at": "2026-06-20T09:02:18+00:00", "updated_at": "2026-06-20T09:02:18+00:00", "text": "", "content": [{"type": "text", "text": "比如 $x^2+x+1=0$，$\\Delta=1-4=-3<0$，解为 $x=\\frac{-1\\pm\\sqrt{3}\\,i}{2}$，一对共轭复根。"}], "files": [], "attachments": [], "parent_message_uuid": null}, {"uuid": "m427390", "sender": "human", "created_at": "2026-06-20T09:03:00+00:00", "updated_at": "2026-06-20T09:03:00+00:00", "text": "顺便讲下韦达定理", "content": [{"type": "text", "text": "顺便讲下韦达定理"}], "files": [], "attachments": [], "parent_message_uuid": null}, {"uuid": "m862307", "sender": "assistant", "created_at": "2026-06-20T09:03:16+00:00", "updated_at": "2026-06-20T09:03:16+00:00", "text": "", "content": [{"type": "text", "text": "设两根 $x_1,x_2$，韦达定理：\n\n$$x_1+x_2=-\\frac{b}{a},\\qquad x_1 x_2=\\frac{c}{a}$$\n\n不解方程就能知道两根的和与积。"}], "files": [], "attachments": [], "parent_message_uuid": null}]}, {"uuid": "conv-b", "name": "用代码快速计算", "summary": "", "created_at": "2026-06-18T14:00:00+00:00", "updated_at": "2026-06-18T14:02:20+00:00", "account": {"uuid": "demo-user"}, "chat_messages": [{"uuid": "m320962", "sender": "human", "created_at": "2026-06-18T14:00:00+00:00", "updated_at": "2026-06-18T14:00:00+00:00", "text": "帮我算一下 1 到 100 所有整数的和", "content": [{"type": "text", "text": "帮我算一下 1 到 100 所有整数的和"}], "files": [], "attachments": [], "parent_message_uuid": null}, {"uuid": "m482067", "sender": "assistant", "created_at": "2026-06-18T14:00:20+00:00", "updated_at": "2026-06-18T14:00:20+00:00", "text": "", "content": [{"type": "thinking", "thinking": "用等差数列求和公式，再用一小段代码验证。"}, {"type": "tool_use", "name": "repl", "input": {"code": "print(sum(range(1, 101)))"}}, {"type": "tool_result", "content": "5050"}, {"type": "text", "text": "1 到 100 的和是 **5050**。用公式：$\\frac{n(n+1)}{2}=\\frac{100\\times 101}{2}=5050$。"}], "files": [], "attachments": [], "parent_message_uuid": null}, {"uuid": "m466370", "sender": "human", "created_at": "2026-06-18T14:01:00+00:00", "updated_at": "2026-06-18T14:01:00+00:00", "text": "那 1 到 1000 呢", "content": [{"type": "text", "text": "那 1 到 1000 呢"}], "files": [], "attachments": [], "parent_message_uuid": null}, {"uuid": "m365958", "sender": "assistant", "created_at": "2026-06-18T14:01:18+00:00", "updated_at": "2026-06-18T14:01:18+00:00", "text": "", "content": [{"type": "tool_use", "name": "repl", "input": {"code": "print(sum(range(1, 1001)))"}}, {"type": "tool_result", "content": "500500"}, {"type": "text", "text": "是 **500500**。"}], "files": [], "attachments": [], "parent_message_uuid": null}, {"uuid": "m186302", "sender": "human", "created_at": "2026-06-18T14:02:00+00:00", "updated_at": "2026-06-18T14:02:00+00:00", "text": "列出前 10 个斐波那契数", "content": [{"type": "text", "text": "列出前 10 个斐波那契数"}], "files": [], "attachments": [], "parent_message_uuid": null}, {"uuid": "m188414", "sender": "assistant", "created_at": "2026-06-18T14:02:20+00:00", "updated_at": "2026-06-18T14:02:20+00:00", "text": "", "content": [{"type": "tool_use", "name": "repl", "input": {"code": "a,b=0,1;out=[]\nfor _ in range(10):\n out.append(a);a,b=b,a+b\nprint(out)"}}, {"type": "tool_result", "content": "[0, 1, 1, 2, 3, 5, 8, 13, 21, 34]"}, {"type": "text", "text": "前 10 个：`0, 1, 1, 2, 3, 5, 8, 13, 21, 34`。"}], "files": [], "attachments": [], "parent_message_uuid": null}]}, {"uuid": "conv-c", "name": "杭州两天行程", "summary": "", "created_at": "2026-06-15T20:00:00+00:00", "updated_at": "2026-06-15T20:02:16+00:00", "account": {"uuid": "demo-user"}, "chat_messages": [{"uuid": "m142804", "sender": "human", "created_at": "2026-06-15T20:00:00+00:00", "updated_at": "2026-06-15T20:00:00+00:00", "text": "这是我整理的杭州景点，帮我排个轻松点的两天行程", "content": [{"type": "text", "text": "这是我整理的杭州景点，帮我排个轻松点的两天行程"}], "files": [{"file_name": "行程草稿.pdf", "file_uuid": "demo-file-1"}], "attachments": [{"file_name": "景点清单.txt", "file_type": "txt", "file_size": "96", "extracted_content": "西湖\n灵隐寺\n河坊街\n西溪湿地\n南宋御街"}], "parent_message_uuid": null}, {"uuid": "m578648", "sender": "assistant", "created_at": "2026-06-15T20:00:25+00:00", "updated_at": "2026-06-15T20:00:25+00:00", "text": "", "content": [{"type": "text", "text": "给你排了个不赶路的两天版：\n\n**Day 1（西湖片区）**\n- 上午：西湖（断桥→白堤）\n- 下午：灵隐寺 + 飞来峰\n- 傍晚：河坊街小吃\n\n**Day 2（自然慢节奏）**\n- 上午：西溪湿地坐船\n- 下午：南宋御街喝茶收尾"}], "files": [], "attachments": [], "parent_message_uuid": null}, {"uuid": "m898565", "sender": "human", "created_at": "2026-06-15T20:01:00+00:00", "updated_at": "2026-06-15T20:01:00+00:00", "text": "第一天想再轻松些，灵隐寺去掉", "content": [{"type": "text", "text": "第一天想再轻松些，灵隐寺去掉"}], "files": [], "attachments": [], "parent_message_uuid": null}, {"uuid": "m210495", "sender": "assistant", "created_at": "2026-06-15T20:01:20+00:00", "updated_at": "2026-06-15T20:01:20+00:00", "text": "", "content": [{"type": "text", "text": "好，第一天精简为：西湖漫步 → 湖边咖啡馆歇脚 → 河坊街晚饭，一整天很松弛。"}], "files": [], "attachments": [], "parent_message_uuid": null}, {"uuid": "m237159", "sender": "human", "created_at": "2026-06-15T20:02:00+00:00", "updated_at": "2026-06-15T20:02:00+00:00", "text": "湖边咖啡馆有推荐吗", "content": [{"type": "text", "text": "湖边咖啡馆有推荐吗"}], "files": [], "attachments": [], "parent_message_uuid": null}, {"uuid": "m734193", "sender": "assistant", "created_at": "2026-06-15T20:02:16+00:00", "updated_at": "2026-06-15T20:02:16+00:00", "text": "", "content": [{"type": "text", "text": "北山街一带的独立咖啡馆，露台能直接看湖，适合发呆。"}], "files": [], "attachments": [], "parent_message_uuid": null}]}]};
 document.title='Claude 数据查看器 '+APP_VERSION;
 document.addEventListener('DOMContentLoaded',()=>{const b=document.getElementById('ver-badge');if(b)b.textContent=APP_VERSION;});
 if(typeof marked!=='undefined')marked.setOptions({breaks:true,gfm:true});
@@ -736,7 +741,8 @@ const modalRememberWrap=$('modal-remember-wrap');
 
 // ── INIT ───────────────────────────────────────────────
 applyTheme();
-checkStartupCache();
+if(new URLSearchParams(location.search).get('demo'))loadDemo();
+else checkStartupCache();
 
 async function checkStartupCache(){
   if(cacheMode==='never')return; // user opted out
@@ -796,6 +802,7 @@ $('dark-btn').addEventListener('click',()=>{
 
 // ── FILE INPUT ─────────────────────────────────────────
 fileInput.addEventListener('change',e=>{if(e.target.files.length)loadFiles(Array.from(e.target.files))});
+$('demo-btn').addEventListener('click',loadDemo);
 $('pick-label').addEventListener('click',e=>e.stopPropagation());
 dropZone.addEventListener('click',e=>{
   if(e.target===dropZone||e.target.classList.contains('drop-icon')||
@@ -816,6 +823,16 @@ function resetState(){
   appData={convs:[],projects:[],memories:null,account:null,globalMemory:null};
   filteredConvs=[];listDisplay=[];curConv=null;curMsgs=[];
   filterFav=false;filterTag='';
+}
+
+// 载入内置演示数据（供在线体验 / 截图，无需真实导出）
+function loadDemo(){
+  resetState();
+  appData.convs=DEMO_DATA.convs||[];
+  appData.projects=DEMO_DATA.projects||[];
+  appData.memories=DEMO_DATA.memories||null;
+  appData.account=DEMO_DATA.account||null;
+  finalizeData(true);
 }
 
 // ── LOAD FILES ─────────────────────────────────────────
