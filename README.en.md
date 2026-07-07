@@ -6,7 +6,7 @@
 
 A single-file HTML tool for viewing and analyzing your personal data exported from Claude.ai. Double-click to use — no server, no network, no account required. **Since v5.2, all dependencies are inlined into the single file, so it works fully offline with zero external requests.**
 
-🔗 **Live demo**: <https://crownleo.github.io/ClaudeViewer/claude_viewer.html>
+🔗 **Live demo**: <https://claudeviewersite.crownleo.cn/>
 📥 **Download**: [latest release](https://github.com/crownleo/ClaudeViewer/releases/latest)　·　🗺️ [Roadmap](docs/ROADMAP.md)
 
 <p align="center"><img src="image/封面.png" alt="Claude Data Viewer" width="520"></p>
@@ -84,6 +84,7 @@ A single-file HTML tool for viewing and analyzing your personal data exported fr
 | Feature | Notes |
 |---|---|
 | 🌙 Dark mode | One-click toggle, Claude warm dark theme, state persisted |
+| 📱 Mobile support | Single-column master-detail on phones; full-width list/detail with back-to-list |
 | Top nav bar | Current conversation name + back button |
 
 ---

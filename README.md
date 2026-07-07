@@ -6,7 +6,7 @@
 
 一个单文件 HTML 工具，用于查看和分析从 Claude.ai 导出的个人数据。双击即用，无需服务器、无需联网、无需账号。**v5.2 起所有依赖库已内联进单文件，完全离线可用、零外部请求。**
 
-🔗 **在线体验**：<https://crownleo.github.io/ClaudeViewer/claude_viewer.html>
+🔗 **在线体验**：<https://claudeviewersite.crownleo.cn/>
 📥 **下载单文件**：[最新 Release](https://github.com/crownleo/ClaudeViewer/releases/latest)　·　🗺️ [路线图](docs/ROADMAP.md)
 
 <p align="center"><img src="image/封面.png" alt="Claude 数据查看器" width="520"></p>
@@ -83,6 +83,7 @@
 | 功能 | 说明 |
 |---|---|
 | 🌙 深色模式 | 一键切换，Claude 暖色深色主题，状态持久化 |
+| 📱 移动端适配 | 手机上单栏「主从」布局，列表与详情全宽切换，返回即回列表 |
 | 顶部导航栏 | 当前对话名称 + 返回按钮 |
 
 ---
