@@ -2,4 +2,5 @@
 .claude/
 build/vendor/
 .DS_Store
-_local/
+# 下划线开头的目录不纳入版本管理（本地产物 _local/、发布产物 _release/ 等）
+_*/

@@ -9,7 +9,7 @@
 🔗 **在线体验**：<https://claudeviewersite.crownleo.cn/>
 📥 **下载单文件**：[最新 Release](https://github.com/crownleo/ClaudeViewer/releases/latest)　·　🗺️ [路线图](docs/ROADMAP.md)
 
-<p align="center"><img src="image/封面.png" alt="Claude 数据查看器" width="520"></p>
+<p align="center"><img src="assets/nav.png" alt="Claude 数据查看器" width="640"></p>
 
 > 在线体验版同样在你的浏览器本地运行、不上传任何数据；如需长期使用，建议[下载单文件](https://github.com/crownleo/ClaudeViewer/releases/latest)离线保存。
 
@@ -90,11 +90,15 @@
 
 ## 📸 界面预览
 
-| 主页面 · 对话查看 | 全局搜索 |
+| 对话查看 · 导航条 | 全局搜索 |
 |---|---|
-| ![主页面](image/主页面.png) | ![全局搜索](image/搜索.png) |
+| ![对话查看](assets/nav.png) | ![全局搜索](assets/search.png) |
 | **统计分析** | **项目** |
-| ![统计分析](image/统计.png) | ![项目](image/项目.png) |
+| ![统计分析](assets/stats.png) | ![项目](assets/projects.png) |
+| **记忆** | **工具调用** |
+| ![记忆](assets/mem.png) | ![工具调用](assets/tool.png) |
+| **LaTeX 公式** | **深色模式** |
+| ![LaTeX 公式](assets/latex.png) | ![深色模式](assets/dark.png) |
 
 ---
 

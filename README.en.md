@@ -9,7 +9,7 @@ A single-file HTML tool for viewing and analyzing your personal data exported fr
 🔗 **Live demo**: <https://claudeviewersite.crownleo.cn/>
 📥 **Download**: [latest release](https://github.com/crownleo/ClaudeViewer/releases/latest)　·　🗺️ [Roadmap](docs/ROADMAP.md)
 
-<p align="center"><img src="image/封面.png" alt="Claude Data Viewer" width="520"></p>
+<p align="center"><img src="assets/nav.png" alt="Claude Data Viewer" width="640"></p>
 
 > The live demo also runs entirely in your browser and uploads nothing. For long-term use, [download the single file](https://github.com/crownleo/ClaudeViewer/releases/latest) and keep it offline.
 
@@ -91,11 +91,15 @@ A single-file HTML tool for viewing and analyzing your personal data exported fr
 
 ## 📸 Screenshots
 
-| Main page · conversation view | Global search |
+| Conversation view · navigator | Global search |
 |---|---|
-| ![Main page](image/主页面.png) | ![Global search](image/搜索.png) |
+| ![Conversation view](assets/nav.png) | ![Global search](assets/search.png) |
 | **Statistics** | **Projects** |
-| ![Statistics](image/统计.png) | ![Projects](image/项目.png) |
+| ![Statistics](assets/stats.png) | ![Projects](assets/projects.png) |
+| **Memory** | **Tool calls** |
+| ![Memory](assets/mem.png) | ![Tool calls](assets/tool.png) |
+| **LaTeX rendering** | **Dark mode** |
+| ![LaTeX rendering](assets/latex.png) | ![Dark mode](assets/dark.png) |
 
 ---
 
