@@ -1,4 +1,4 @@
-# 🗂️ Claude Data Viewer v5.4
+# 🗂️ Claude Data Viewer v5.5
 
 [简体中文](README.md) · **English**
 
@@ -202,6 +202,8 @@ ClaudeViewer renders the **LaTeX text Claude writes in the message body**:
 
 ## 📋 Version History
 
+**v5.5** — **Markdown export fixes + stats charts polish.** ① Export filenames now start with the conversation's creation time (e.g. `2026-05-26_1430_Title.md`) for natural archive sorting; ② Normalized heading hierarchy — message headers are now h2 and headings inside Claude's replies are demoted, so the document outline is no longer scrambled; ③ Attachment code fences grow dynamically so content containing triple backticks no longer breaks the formatting, and truncation is now labelled; ④ The document header gains created/updated time and message-count metadata; ⑤ On the stats page, the monthly bar chart no longer stretches (capped bar width, shrink-only scaling, minimum bar height, hover tooltips), and the activity heatmap gets bigger cells plus month/weekday labels.
+
 **v5.4** — **Mobile support.** On phones the app switches to a single-column master-detail layout: the conversation list is full-width, and opening a conversation / stats / project / memory shows the detail full-width and readable, with a back button to return to the list. Fixes the previous issue where the right detail pane was squeezed into an unreadable sliver on mobile. Desktop's two-column layout is unchanged.
 
 **v5.3** — Three features: ① **Personal memory** — the global personal memory in the export's `memories.json` now shows directly in the "Memory" tab (previously ignored); ② **Tool-call rendering** — `tool_use`/`tool_result` (web search, code analysis, MCP, …) render as collapsible blocks, fixing missing content in tool-using conversations; ③ **Conversation navigator** — a right-edge rail keyed by your questions, hover to expand, click to jump (ChatGPT-style).
@@ -219,7 +221,7 @@ Core capabilities:
 - Management: favorites, tags, dark mode, IndexedDB persistence
 - Export: single Markdown/PDF (with formulas), batch ZIP of all conversations
 
-> Evolution: v1 conversation viewing & virtual scroll → v2 ZIP import & multi-type data → v3 global search & statistics → v4 search sidebar, heatmap, local persistence, LaTeX, hybrid rendering → v5 stable consolidation → v5.1 one-click copy & spacing → v5.2 drop CDN, inline dependencies → v5.3 personal memory, tool calls, conversation navigator → v5.4 mobile support.
+> Evolution: v1 conversation viewing & virtual scroll → v2 ZIP import & multi-type data → v3 global search & statistics → v4 search sidebar, heatmap, local persistence, LaTeX, hybrid rendering → v5 stable consolidation → v5.1 one-click copy & spacing → v5.2 drop CDN, inline dependencies → v5.3 personal memory, tool calls, conversation navigator → v5.4 mobile support → v5.5 MD export fixes & stats charts polish.
 
 ---
 
@@ -250,4 +252,4 @@ This project is open source under the [GNU GPL-3.0](LICENSE). You are free to us
 
 ---
 
-*Claude Data Viewer v5.4 · Your data, under your control*
+*Claude Data Viewer v5.5 · Your data, under your control*
