@@ -230,11 +230,11 @@ ClaudeViewer 渲染的是 Claude **写在正文中的 LaTeX 文本**：
 
 ---
 
-## ⭐ Star 趋势
+## ⭐ Star
 
 如果这个工具帮到了你，欢迎点个 Star 支持一下 ⭐
 
-[![Star History Chart](https://api.star-history.com/svg?repos=crownleo/ClaudeViewer&type=Date)](https://star-history.com/#crownleo/ClaudeViewer&Date)
+[![GitHub stars](https://img.shields.io/github/stars/crownleo/ClaudeViewer?style=for-the-badge&logo=github&label=Star&color=f5c518)](https://github.com/crownleo/ClaudeViewer/stargazers)
 
 ---
 

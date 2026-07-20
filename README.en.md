@@ -231,11 +231,11 @@ Curious about where the project is headed? See the [**Roadmap**](docs/ROADMAP.md
 
 ---
 
-## ⭐ Star History
+## ⭐ Star
 
 If this tool helps you, a Star would mean a lot ⭐
 
-[![Star History Chart](https://api.star-history.com/svg?repos=crownleo/ClaudeViewer&type=Date)](https://star-history.com/#crownleo/ClaudeViewer&Date)
+[![GitHub stars](https://img.shields.io/github/stars/crownleo/ClaudeViewer?style=for-the-badge&logo=github&label=Star&color=f5c518)](https://github.com/crownleo/ClaudeViewer/stargazers)
 
 ---
 
