@@ -591,7 +591,8 @@ mark.hl.cur{background:var(--primary);color:#fff}
   <div class="u-logo">🗂️</div>
   <div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px">
     <div class="u-title">Claude 数据查看器</div>
-    <div class="ver-badge" id="ver-badge">v5.5</div>
+    <!-- 不写版本号：与 <title> 同理，DOMContentLoaded 时由 APP_VERSION 填充 -->
+    <div class="ver-badge" id="ver-badge"></div>
     <div class="u-sub">数据完全本地处理 · 不上传任何内容</div>
   </div>
   <div class="drop-zone" id="drop-zone">

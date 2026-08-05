@@ -1,4 +1,4 @@
-# 🗂️ Claude Data Viewer v5.5
+# 🗂️ Claude Data Viewer v5.7
 
 [简体中文](README.md) · **English**
 
@@ -23,8 +23,22 @@ A single-file HTML tool for viewing and analyzing your personal data exported fr
 | Drop `.zip` | Auto-parses all JSON inside the archive in one step |
 | Drop / pick `.json` | Multiple files at once supported |
 | Drop / pick `.md` | Import custom global-memory files |
-| Auto-filter empty chats | Conversations with no message content are hidden |
+| Empty-chat handling | Conversations with no messages at all are hidden; conversations whose messages are all empty are collapsed by default and expand in one click (no longer silently dropped since v5.7) |
 | Local persistent cache | Optionally save to the browser to skip re-importing next time |
+
+### Claude Code Local Sessions (added in v5.6)
+| Feature | Notes |
+|---|---|
+| One-click local open | "📂 Open Claude Code local conversations" on the upload screen — just pick your `.claude` directory |
+| Read-only | Strictly read-only; your `.claude` files are never modified or deleted |
+| Grouped by project | The sidebar folds sessions into projects (readable names resolved from `cwd`) |
+| Session metadata | Each session shows turn count, input/output/cache tokens, file size and mtime |
+| Active ● / Agent badges | Marks currently running sessions and sub-agent (`agent-*.jsonl`) sessions |
+| Cross-project full-text search | Scans every `.jsonl`, highlights hits, click to jump straight to the session |
+| Shared viewing experience | Thinking/tool collapsing, navigator rail, in-conversation search and MD export all work the same |
+| Dual read backends | File System Access API (lazy loading) on https/localhost; automatic fallback to a folder picker on `file://` |
+
+> Claude Code sessions and Claude.ai exports are two independent modes — click ⇄ in the sidebar to switch at any time; neither clears the other.
 
 ### Conversation Viewing
 | Feature | Notes |
@@ -157,7 +171,7 @@ ClaudeViewer renders the **LaTeX text Claude writes in the message body**:
 - **Zero external requests**: since v5.2, marked.js, JSZip, KaTeX and its fonts are all inlined into the single file — opening the page makes no request to any CDN or third party, and it works fully offline
 - **No persistence by default**: unless you explicitly choose "save locally"
 - **IndexedDB cache**: if you save, data lives in this device's browser, readable only locally, clearable anytime
-- **localStorage**: favorites, tags, dark mode, cache preference (no conversation content)
+- **localStorage**: favorites, tags, dark mode, cache preference, collapse-empty-chats preference (no conversation content)
 
 ---
 
@@ -291,4 +305,4 @@ This project is open source under the [GNU GPL-3.0](LICENSE). You are free to us
 
 ---
 
-*Claude Data Viewer v5.5 · Your data, under your control*
+*Claude Data Viewer v5.7 · Your data, under your control*
