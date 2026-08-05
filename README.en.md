@@ -53,6 +53,7 @@ A single-file HTML tool for viewing and analyzing your personal data exported fr
 | ⭐ Favorites | Star conversations, filter by "favorites only" |
 | 🏷 Tags | Custom tag classification, multi-tag filtering, persisted |
 | 📋 One-click copy | Copy message / thinking / attachment content |
+| 🫥 Collapse all-empty chats | Conversations whose messages are all empty in the export are collapsed by default; the filter bar shows the count and expands them in one click (preference persisted) |
 
 ### Statistics & Analysis
 | Feature | Notes |
@@ -61,6 +62,7 @@ A single-file HTML tool for viewing and analyzing your personal data exported fr
 | Monthly bar chart | Distribution of conversation creation time |
 | Activity heatmap | Per-day heatmap, hover to inspect, click to filter that day's chats |
 | Message ranking | Top 10 conversations by message count, click to open |
+| 🩺 Data health check | Detects messages that are empty in the export itself (count/share, worst-affected conversations, monthly distribution) with one-click report copy — tells "the platform generated nothing" apart from "the viewer didn't display it" |
 
 ### Multi-type Data
 | Tab | Source | Content |
@@ -200,7 +202,44 @@ ClaudeViewer renders the **LaTeX text Claude writes in the message body**:
 
 ---
 
+## ❓ FAQ: Why does my conversation "lose half of itself"?
+
+Some users report that a conversation starts as a normal back-and-forth but **the second half shows only their own messages**, and suspect the viewer dropped data.
+
+**Conclusion: in the vast majority of cases those replies were already empty on claude.ai — the viewer did not lose them.**
+
+When Claude fails to generate or gets interrupted, it leaves an **empty message** in the conversation — at the time, the web page showed a blank bubble. The export faithfully records it as a message shell with `"content": [], "text": ""` (uuid and timestamps present, just no content).
+
+v5.6 and earlier **silently filtered these out**, so "Claude produced no output" was displayed as "the message never existed" — which looks exactly like the second half of a conversation losing one side.
+
+**Fixed in v5.7**: empty messages now render as a grey placeholder, conversation cards carry a `⚠ N` badge, and all-empty conversations no longer vanish from the list.
+
+### How to check your own export
+
+Open the **Statistics** tab and scroll to **🩺 Data Health Check** at the bottom. It reports:
+
+- how many empty messages the export contains, and what share of the total
+- which conversations are worst affected (empty count, longest empty run)
+- the monthly distribution of empty messages — a spike in specific months indicates a platform-side outage, not a problem with your data or this tool
+- a one-click "copy report" button for reporting issues
+
+You can also verify by hand: unzip the export, open `conversations.json` in a text editor, and find the affected conversation. A run of `assistant` messages with `"content": [], "text": ""` means the original conversation was empty — no viewer can recover it, and claude.ai showed blank bubbles at the time too.
+
+### Other causes of "incomplete history"
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| Whole stretches of history missing | The `batch-0000` in the export filename means it is sharded; large accounts also get `batch-0001`, `batch-0002`, … | Import every shard ZIP |
+| Multiple answers to the same question | You edited a prompt or hit "regenerate"; the export contains all branches | Expected, not data loss |
+| Attachment contents unavailable | The export only carries attachment uuid references, not the files themselves | Platform limitation, unrecoverable |
+
+---
+
 ## 📋 Version History
+
+**v5.7** — **Fixes the "conversation loses half of itself" display bug + data health check.** ① **Empty messages are no longer silently dropped** — messages left empty by a failed generation now render as a grey placeholder; previously the second half of a conversation appeared to lose one side entirely and was mistaken for viewer data loss; ② **Attachment-only messages** (a file uploaded with no text typed) are no longer judged empty and discarded, which previously took the attachment down with them; ③ **All-empty conversations no longer disappear** from the list — collapsed by default to keep the list clean, but the filter bar permanently shows a "🫥 N all-empty conversations hidden" chip that expands them in one click, instead of them silently vanishing; ④ conversation cards gain a `⚠ N` badge showing the empty-message count; ⑤ the Statistics tab gains **🩺 Data Health Check** — empty-message count/share, worst-affected conversations, monthly distribution, and a one-click copy of the report, so anyone can self-diagnose without Python or a command line; ⑥ Markdown / PDF export emit the same placeholder note instead of leaving a bare heading.
+
+**v5.6** — **Claude Code local sessions.** The upload screen gains "📂 Open Claude Code local conversations": pick your `.claude` directory to browse `projects/**/*.jsonl` sessions read-only — ① grouped by project with turn count / tokens / size / time, marking active ● and Agent sessions; ② cross-project full-text search; ③ a normalization adapter reuses the main viewer's thinking/tool collapsing, navigator rail, in-conversation search and MD export (tool calls/results now included in MD export); ④ dual read backends — File System Access API with lazy loading in secure contexts, automatic fallback to a folder picker on `file://`; ⑤ an independent mode alongside Claude.ai exports, switchable from the sidebar without clearing either. Strictly read-only; local files are never modified.
 
 **v5.5** — **Markdown export fixes + stats charts polish.** ① Export filenames now start with the conversation's creation time (e.g. `2026-05-26_1430_Title.md`) for natural archive sorting; ② Normalized heading hierarchy — message headers are now h2 and headings inside Claude's replies are demoted, so the document outline is no longer scrambled; ③ Attachment code fences grow dynamically so content containing triple backticks no longer breaks the formatting, and truncation is now labelled; ④ The document header gains created/updated time and message-count metadata; ⑤ On the stats page, the monthly bar chart no longer stretches (capped bar width, shrink-only scaling, minimum bar height, hover tooltips), and the activity heatmap gets bigger cells plus month/weekday labels.
 
@@ -221,7 +260,7 @@ Core capabilities:
 - Management: favorites, tags, dark mode, IndexedDB persistence
 - Export: single Markdown/PDF (with formulas), batch ZIP of all conversations
 
-> Evolution: v1 conversation viewing & virtual scroll → v2 ZIP import & multi-type data → v3 global search & statistics → v4 search sidebar, heatmap, local persistence, LaTeX, hybrid rendering → v5 stable consolidation → v5.1 one-click copy & spacing → v5.2 drop CDN, inline dependencies → v5.3 personal memory, tool calls, conversation navigator → v5.4 mobile support → v5.5 MD export fixes & stats charts polish.
+> Evolution: v1 conversation viewing & virtual scroll → v2 ZIP import & multi-type data → v3 global search & statistics → v4 search sidebar, heatmap, local persistence, LaTeX, hybrid rendering → v5 stable consolidation → v5.1 one-click copy & spacing → v5.2 drop CDN, inline dependencies → v5.3 personal memory, tool calls, conversation navigator → v5.4 mobile support → v5.5 MD export fixes & stats charts polish → v5.6 Claude Code local sessions → v5.7 empty-message placeholders & data health check.
 
 ---
 
