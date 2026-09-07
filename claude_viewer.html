@@ -583,6 +583,18 @@ mark.hl.cur{background:var(--primary);color:#fff}
 .cc-dot{color:#4f7a4d;font-size:10px;flex-shrink:0}
 .cc-sess{margin:0 0 6px 10px}
 .cc-tok{font-size:12px;font-weight:500;color:var(--t3);margin-left:8px;font-family:var(--fm)}
+
+/* ZIP archive management remains optional in the standalone HTML. */
+#archive-panel[hidden],#archive-panel [hidden]{display:none!important}
+#archive-panel{position:fixed;inset:0;z-index:1500;background:rgba(0,0,0,.35);padding:4vh 20px;overflow:auto}
+.archive-sheet{max-width:850px;margin:auto;padding:26px;border-radius:16px;background:var(--bg,#faf9f5);color:var(--t1,#222);box-shadow:0 12px 48px #0003}
+.archive-sheet h2{margin:0 0 10px}.archive-sheet p{font-size:13px;line-height:1.65;margin:8px 0 14px}
+.archive-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.archive-actions button,.archive-entry{border:1px solid var(--border,#ddd);border-radius:8px;padding:8px 12px;background:var(--bg,#fff);color:inherit;cursor:pointer;font:inherit;font-size:12px}
+.archive-actions button:disabled{opacity:.5;cursor:wait}.archive-actions input{border:1px solid #aaa;border-radius:6px;padding:7px;max-width:190px;background:transparent;color:inherit}
+.archive-entry{margin:4px 12px 9px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.archive-row{padding:18px 0;border-top:1px solid #aaa5}.archive-row h3{font-size:15px;margin:0}.archive-row p{color:var(--t2,#666)}
+#archive-status{color:var(--accent,#ae5537);min-height:20px}
 </style>
 </head>
 <body>
@@ -710,6 +722,123 @@ mark.hl.cur{background:var(--primary);color:#fff}
 <div id="print-area"></div>
 
 <script>
+/* archive-library:start */
+(() => {
+  'use strict';
+  const DB_NAME = 'claude_viewer_archives_v1';
+  const metadata = value => ({
+    favorites: Array.isArray(value?.favorites) ? value.favorites.filter(v => typeof v === 'string') : [],
+    tags: Object.fromEntries(Object.entries(value?.tags || {}).filter(([,v]) => Array.isArray(v)).map(([k,v]) => [k,v.filter(t => typeof t === 'string')]))
+  });
+  // Validate without changing the current viewer or retaining extracted files.
+  async function validateZip(file) {
+    const zip = await JSZip.loadAsync(typeof file?.arrayBuffer === 'function' ? await file.arrayBuffer() : file, {checkCRC32:true});
+    let conversations = false;
+    for (const entry of Object.values(zip.files)) {
+      if (entry.dir) continue;
+      const name = entry.name.split('/').pop();
+      if (!/^(conversations|users|memories)\.json$/i.test(name) && !/projects\/[^/]+\.json$/i.test(entry.name)) continue;
+      const data = JSON.parse(await entry.async('string'));
+      if (name === 'conversations.json') {
+        if (!Array.isArray(data)) throw new Error('conversations.json 必须是对话数组');
+        for(const conversation of data){
+          if(!conversation||typeof conversation!=='object'||Array.isArray(conversation))throw new Error('对话条目格式无效');
+          for(const key of ['uuid','name','summary','created_at','updated_at'])if(conversation[key]!=null&&typeof conversation[key]!=='string')throw new Error('对话 '+key+' 格式无效');
+          if(conversation.chat_messages!=null&&!Array.isArray(conversation.chat_messages))throw new Error('chat_messages 必须是数组');
+          for(const message of conversation.chat_messages||[]){
+            if(!message||typeof message!=='object'||Array.isArray(message))throw new Error('消息条目格式无效');
+            for(const key of ['text','sender','uuid','created_at'])if(message[key]!=null&&typeof message[key]!=='string')throw new Error('消息 '+key+' 格式无效');
+            for(const key of ['content','attachments','files']){
+              if(message[key]!=null&&!Array.isArray(message[key]))throw new Error('消息 '+key+' 必须是数组');
+              for(const item of message[key]||[]){
+                if(!item||typeof item!=='object'||Array.isArray(item))throw new Error('消息 '+key+' 条目格式无效');
+                for(const field of ['text','thinking','file_name','type'])if(item[field]!=null&&typeof item[field]!=='string')throw new Error('消息内容 '+field+' 格式无效');
+              }
+            }
+          }
+        }
+        conversations = true;
+      }
+    }
+    if (!conversations) throw new Error('ZIP 中没有有效的 conversations.json');
+  }
+  class BrowserStore {
+    constructor(idb = indexedDB, cryptoProvider = crypto) { this.idb=idb; this.crypto=cryptoProvider; }
+    async open() {
+      return new Promise((resolve,reject) => {
+        const request=this.idb.open(DB_NAME,1);
+        request.onupgradeneeded=()=>request.result.createObjectStore('archives',{keyPath:'id'});
+        request.onsuccess=()=>resolve(request.result);
+        request.onerror=()=>reject(request.error);
+        request.onblocked=()=>reject(new Error('请关闭另一个正在更新档案库的窗口'));
+      });
+    }
+    async transaction(mode, action) {
+      const db=await this.open();
+      return new Promise((resolve,reject)=>{
+        const tx=db.transaction('archives',mode);
+        let result,failure;
+        try { const request=action(tx.objectStore('archives')); request.onsuccess=()=>{result=request.result;};request.onerror=()=>{failure=request.error;}; }
+        catch(error) { tx.abort();db.close();reject(error);return; }
+        tx.oncomplete=()=>{db.close();resolve(result);};
+        tx.onerror=event=>{failure=failure||event.target.error;};
+        tx.onabort=()=>{db.close();reject(failure||tx.error||new Error('档案保存失败'));};
+      });
+    }
+    publicRecord(record) { if(!record)return null; const {blob,...rest}=record;return rest; }
+    async list() { return (await this.transaction('readonly',store=>store.getAll())).map(r=>this.publicRecord(r)).sort((a,b)=>a.createdAt.localeCompare(b.createdAt)); }
+    async get(id) { const value=await this.transaction('readonly',store=>store.get(id));if(!value)throw new Error('这份档案已不在资料库中');return value; }
+    async importFile(file) {
+      await validateZip(file);
+      const bytes=await file.arrayBuffer();
+      if(!this.crypto.subtle)throw new Error('浏览器档案库需要 HTTPS 或本地文件页面');
+      const sha256=Array.from(new Uint8Array(await this.crypto.subtle.digest('SHA-256',bytes)),n=>n.toString(16).padStart(2,'0')).join('');
+      // Content-addressed IDs make repeat imports idempotent, including concurrent tabs.
+      const id=sha256;
+      const old=await this.transaction('readonly',store=>store.get(id));
+      if(old)return this.publicRecord(old);
+      const filename=file.name || 'export.zip';
+      const record={id,name:filename.replace(/\.zip$/i,''),filename,size:file.size,sha256,createdAt:new Date().toISOString(),metadata:metadata(null),blob:new Blob([bytes],{type:'application/zip'})};
+      try { await this.transaction('readwrite',store=>store.add(record)); }
+      catch(error) { if(error?.name!=='ConstraintError')throw error;return this.publicRecord(await this.get(id)); }
+      return this.publicRecord(record);
+    }
+    async read(record) { return (await this.get(record.id)).blob; }
+    async update(id, transform) {
+      const db=await this.open();
+      return new Promise((resolve,reject)=>{
+        const tx=db.transaction('archives','readwrite'),store=tx.objectStore('archives');let updated;
+        const req=store.get(id);
+        req.onsuccess=()=>{if(!req.result){tx.abort();return;}updated=transform(req.result);store.put(updated);};
+        tx.oncomplete=()=>{db.close();resolve(this.publicRecord(updated));};
+        tx.onabort=tx.onerror=()=>{db.close();reject(tx.error||new Error('档案更新失败或档案不存在'));};
+      });
+    }
+    setMetadata(id,value) { return this.update(id,record=>({...record,metadata:metadata(value)})); }
+    rename(id,name) { if(!name.trim())throw new Error('名称不能为空');return this.update(id,record=>({...record,name:name.trim().slice(0,120)})); }
+    remove(id) { return this.transaction('readwrite',store=>store.delete(id)); }
+  }
+  class NativeStore {
+    async call(command,args={}) {
+      const reply=await window.webkit.messageHandlers.archives.postMessage({command,...args});
+      if(!reply?.ok)throw new Error(reply?.error || '档案操作失败');
+      return reply.result;
+    }
+    list(){return this.call('list');}
+    importFiles(){return this.call('import');}
+    async read(record){const response=await fetch(record.url);if(!response.ok)throw new Error('无法读取档案原件');return response.blob();}
+    setMetadata(id,metadata){return this.call('metadata',{id,metadata});}
+    rename(id,name){return this.call('rename',{id,name});}
+    remove(id){return this.call('remove',{id});}
+    export(id){return this.call('export',{id});}
+    reveal(id){return this.call('reveal',id?{id}:{});}
+  }
+  globalThis.ClaudeArchiveLibrary={BrowserStore,NativeStore,validateZip,metadata};
+})();
+/* archive-library:end */
+
+</script>
+<script>
 (function(){
 'use strict';
 // ── 版本号（发版只改这一处，标题与徽章自动同步）──
@@ -759,6 +888,173 @@ let ccSessionsCache=new Map();   // dirName -> sessions[]（会话元数据）
 let ccConvCache=new Map();       // uuid -> 归一化后的 conv（供 openConv 复用）
 let ccActiveConvUuid=null;
 
+// ── ARCHIVE LIBRARY UI ─────────────────────────────────
+// Archives own source bytes and annotations; the existing viewer owns rendering.
+let activeArchive=null,archiveRecords=[],archiveQueue=Promise.resolve(),archiveMetadataWrites=Promise.resolve();
+let annotationScope='legacy';
+const pendingArchiveMetadata=new Map();
+const nativeArchives=!!window.webkit?.messageHandlers?.archives;
+const archiveStore=nativeArchives?new ClaudeArchiveLibrary.NativeStore():new ClaudeArchiveLibrary.BrowserStore();
+
+function archiveError(error){console.error(error);$('archive-status').textContent=error.message||String(error);}
+function archiveOperation(action){
+  const run=archiveQueue.then(async()=>{
+    document.querySelectorAll('#archive-panel button').forEach(b=>b.disabled=true);
+    try{return await action();}catch(error){archiveError(error);}
+    finally{document.querySelectorAll('#archive-panel button').forEach(b=>b.disabled=false);hideLoad();}
+  });
+  archiveQueue=run.catch(()=>{});return run;
+}
+function setAnnotationContext(){
+  const scope=appMode==='export'&&activeArchive?activeArchive.id:'legacy';
+  if(scope===annotationScope)return;
+  annotationScope=scope;
+  const state=scope==='legacy'?{favorites:JSON.parse(localStorage.getItem('cv_favs')||'[]'),tags:JSON.parse(localStorage.getItem('cv_tags')||'{}')}:ClaudeArchiveLibrary.metadata(activeArchive.metadata);
+  favorites=new Set(state.favorites);tags=state.tags;
+}
+async function flushArchiveMetadata(){
+  for(const [id,snapshot] of pendingArchiveMetadata){
+    await archiveStore.setMetadata(id,snapshot);
+    if(pendingArchiveMetadata.get(id)===snapshot)pendingArchiveMetadata.delete(id);
+  }
+}
+function persistAnnotations(){
+  if(annotationScope==='legacy'){
+    localStorage.setItem('cv_favs',JSON.stringify([...favorites]));localStorage.setItem('cv_tags',JSON.stringify(tags));return;
+  }
+  const id=annotationScope,snapshot=ClaudeArchiveLibrary.metadata({favorites:[...favorites],tags});
+  if(activeArchive?.id===id)activeArchive.metadata=snapshot;
+  pendingArchiveMetadata.set(id,snapshot);
+  archiveMetadataWrites=archiveMetadataWrites.then(flushArchiveMetadata).catch(error=>{archiveError(error);setArchivePanelVisible(true);});
+}
+function clearArchiveView(){
+  resetState();dayFilter='';gsResults=[];curMemSection='';curTab='convs';
+  clearSearch();srchSidebarOpen=false;srchSidebar.classList.remove('open');
+  heights=[];offsets=[];totalH=0;rendered.clear();vc.innerHTML='';
+  detailTitle.textContent='';staticPanel.innerHTML='';$('nav-rail').innerHTML='';
+  sbSearch.value='';appMode='export';isCached=false;modalOverlay.classList.remove('show');
+  activeArchive=null;setAnnotationContext();
+}
+async function selectArchive(record){
+  await archiveMetadataWrites;await flushArchiveMetadata();
+  // Row actions can outlive a metadata save or a change from another window.
+  // Re-read the record after queued writes so the selected annotations are current.
+  record=(await archiveStore.list()).find(current=>current.id===record.id);
+  if(!record)throw new Error('这份档案已不在资料库中');
+  showLoad('读取档案原件…');
+  const source=await archiveStore.read(record);
+  await ClaudeArchiveLibrary.validateZip(source);
+  const next={convs:[],projects:[],memories:null,account:null,globalMemory:null};
+  await parseZip(source,next);
+  // Commit the new view only after parsing succeeds; failures leave the old view intact.
+  clearArchiveView();activeArchive=record;setAnnotationContext();
+  appData=next;finalizeData(true);applyMode();
+  localStorage.setItem('cv_active_archive',record.id);
+  $('archive-current').textContent='档案库 · '+record.name;
+  closeArchivePanel();updateCacheBar();
+}
+async function refreshArchives(){
+  await archiveMetadataWrites;
+  archiveRecords=await archiveStore.list();
+  const current=activeArchive&&archiveRecords.find(r=>r.id===activeArchive.id);
+  if(current&&current.sha256!==activeArchive.sha256){await selectArchive(current);}
+  if(activeArchive&&!current){
+    clearArchiveView();localStorage.removeItem('cv_active_archive');showUpload();
+    $('archive-current').textContent='档案库';
+    $('archive-status').textContent='当前档案已从资料库移出，原来的聊天视图已关闭。';
+  }
+  renderArchiveRows();return archiveRecords;
+}
+function setArchivePanelVisible(visible){
+  $('archive-panel').hidden=!visible;
+  for(const screen of [mainScreen,uploadScreen]){screen.inert=visible;screen.setAttribute('aria-hidden',String(visible));}
+  if(visible)$('archive-add').focus();
+}
+function closeArchivePanel(){setArchivePanelVisible(false);$('archive-current').focus();}
+function showArchivePanel(){
+  setArchivePanelVisible(true);$('archive-add').focus();
+  return archiveOperation(refreshArchives);
+}
+async function importArchiveFiles(files){
+  const records=[];
+  for(const file of files){
+    if(!/\.zip$/i.test(file.name))throw new Error('档案库只接受 ZIP；JSON/Markdown 可以通过临时查看打开。');
+    records.push(await archiveStore.importFile(file));
+  }
+  await refreshArchives();
+  if(records.length===1)await selectArchive(records[0]);
+  else if(records.length){$('archive-status').textContent='已保存 '+records.length+' 份档案，请选择一份打开。';}
+}
+function archiveButton(label,action){const button=document.createElement('button');button.type='button';button.textContent=label;button.addEventListener('click',()=>archiveOperation(action));return button;}
+function renderArchiveRows(){
+  const list=$('archive-list');list.replaceChildren();
+  if(!archiveRecords.length){const empty=document.createElement('p');empty.textContent='还没有档案。添加 ZIP 后，每份档案的账户、聊天、收藏和标签分别保存。';list.appendChild(empty);}
+  for(const record of archiveRecords){
+    const row=document.createElement('section');row.className='archive-row';
+    const title=document.createElement('h3');title.textContent=record.name+(record.id===activeArchive?.id?' · 正在查看':'');row.appendChild(title);
+    const info=document.createElement('p');info.textContent=record.filename+' · '+formatBytes(record.size)+' · '+fmtDate(record.createdAt);row.appendChild(info);
+    const actions=document.createElement('div');actions.className='archive-actions';
+    actions.appendChild(archiveButton('打开',()=>selectArchive(record)));
+    actions.appendChild(archiveButton('取出原始 ZIP',async()=>{
+      if(nativeArchives){const exported=await archiveStore.export(record.id);if(!exported)return;}
+      else{const blob=await archiveStore.read(record);download(blob,record.filename,'application/zip');}
+      $('archive-status').textContent='已请求导出原始 ZIP，内容未经转换。';
+    }));
+    const name=document.createElement('input');name.value=record.name;name.maxLength=120;name.setAttribute('aria-label','档案名称：'+record.name);actions.appendChild(name);
+    actions.appendChild(archiveButton('重命名',async()=>{
+      await archiveStore.rename(record.id,name.value);if(activeArchive?.id===record.id){activeArchive.name=name.value;$('archive-current').textContent='档案库 · '+name.value;}await refreshArchives();
+    }));
+    if(nativeArchives)actions.appendChild(archiveButton('在 Finder 中显示',()=>archiveStore.reveal(record.id)));
+    actions.appendChild(archiveButton(nativeArchives?'移到废纸篓':'从档案库移除',async()=>{
+      if(!nativeArchives&&!confirm('从浏览器档案库移除这份 ZIP 及其收藏、标签？请先取出需要保留的原始 ZIP。电脑上的原文件不会删除。'))return;
+      const removed=await archiveStore.remove(record.id);if(removed!==false){pendingArchiveMetadata.delete(record.id);await refreshArchives();}
+    }));
+    row.appendChild(actions);list.appendChild(row);
+  }
+}
+async function initArchiveUI(){
+  const panel=document.createElement('div');panel.id='archive-panel';panel.hidden=true;panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-labelledby','archive-title');
+  panel.innerHTML='<div class="archive-sheet"><h2 id="archive-title">ZIP 档案库</h2><p>每份 ZIP 独立查看，原件完整保留，随时可以取出。</p><div class="archive-actions"><button id="archive-add">添加 ZIP 档案</button><button id="archive-refresh">刷新</button><button id="archive-reveal">打开档案文件夹</button><button id="archive-temporary">临时查看 / 旧缓存</button><button id="archive-close">返回查看器</button></div><p id="archive-storage-note"></p><p id="archive-status" role="status" aria-live="polite"></p><div id="archive-list"></div><input type="file" id="archive-files" accept=".zip" multiple hidden></div>';
+  document.body.appendChild(panel);
+  const entry=document.createElement('button');entry.id='archive-current';entry.className='archive-entry';entry.textContent='档案库';$('sidebar-header').after(entry);entry.addEventListener('click',showArchivePanel);
+  const uploadEntry=document.createElement('button');uploadEntry.className='pick-btn';uploadEntry.textContent='打开 ZIP 档案库';dropZone.before(uploadEntry);uploadEntry.addEventListener('click',showArchivePanel);
+  $('archive-storage-note').textContent=nativeArchives?'原始 ZIP 保存在此 Mac 的 Application Support/ClaudeViewer/Archives。可直接向文件夹放入 ZIP，再点刷新。':'浏览器档案库使用此浏览器的本地存储。清理浏览器数据可能清空档案库；请另行保留原始 ZIP。';
+  $('archive-reveal').hidden=!nativeArchives;
+  $('archive-close').addEventListener('click',closeArchivePanel);
+  $('archive-refresh').addEventListener('click',()=>archiveOperation(async()=>{await flushArchiveMetadata();await refreshArchives();$('archive-status').textContent='已刷新，收藏和标签已保存。';}));
+  $('archive-reveal').addEventListener('click',()=>archiveOperation(()=>archiveStore.reveal()));
+  $('archive-add').addEventListener('click',()=>{
+    if(nativeArchives)archiveOperation(async()=>{const records=await archiveStore.importFiles();await refreshArchives();if(records.length===1)await selectArchive(records[0]);});
+    else $('archive-files').click();
+  });
+  $('archive-files').addEventListener('change',event=>{const files=Array.from(event.target.files);event.target.value='';archiveOperation(()=>importArchiveFiles(files));});
+  $('archive-temporary').addEventListener('click',()=>archiveOperation(async()=>{
+    await archiveMetadataWrites;await flushArchiveMetadata();clearArchiveView();$('archive-current').textContent='档案库';localStorage.removeItem('cv_active_archive');closeArchivePanel();showUpload();await checkStartupCache();
+  }));
+  panel.addEventListener('dragover',event=>event.preventDefault());
+  panel.addEventListener('drop',event=>{event.preventDefault();if(nativeArchives)return;const files=Array.from(event.dataTransfer.files);archiveOperation(()=>importArchiveFiles(files));});
+  panel.addEventListener('keydown',event=>{
+    if(event.key==='Escape'){event.preventDefault();closeArchivePanel();}
+    if(event.key==='Tab'){
+      const controls=Array.from(panel.querySelectorAll('button,input')).filter(el=>!el.hidden&&!el.disabled&&el.offsetParent!==null);
+      const first=controls[0],last=controls[controls.length-1];
+      if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}
+      else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}
+    }
+  });
+  window.addEventListener('claude-archives-changed',()=>archiveOperation(async()=>{await refreshArchives();setArchivePanelVisible(true);$('archive-status').textContent='档案库已更新，请选择要查看的档案。';}));
+  window.addEventListener('focus',()=>{if(nativeArchives)archiveOperation(refreshArchives);});
+  return archiveOperation(async()=>{
+    try{
+      await refreshArchives();
+      const previous=archiveRecords.find(r=>r.id===localStorage.getItem('cv_active_archive'));
+      if(previous)await selectArchive(previous);
+      else if(nativeArchives)setArchivePanelVisible(true);
+      else await checkStartupCache();
+    }catch(error){archiveError(error);if(nativeArchives)setArchivePanelVisible(true);else await checkStartupCache();}
+  });
+}
+
 // ── INDEXEDDB ──────────────────────────────────────────
 function openDB(){
   return new Promise((res,rej)=>{
@@ -777,7 +1073,7 @@ async function dbSave(appDataObj){
     const tx=db.transaction('store','readwrite');
     tx.objectStore('store').put({key:'appData',data:appDataObj,savedAt:new Date().toISOString()});
     return new Promise((res,rej)=>{tx.oncomplete=res;tx.onerror=()=>rej(tx.error);});
-  }catch(e){console.error('DB save failed',e);}
+  }catch(e){console.error('DB save failed',e);throw e;}
 }
 async function dbLoad(){
   try{
@@ -822,7 +1118,7 @@ const modalRememberWrap=$('modal-remember-wrap');
 // ── INIT ───────────────────────────────────────────────
 applyTheme();
 if(new URLSearchParams(location.search).get('demo'))loadDemo();
-else checkStartupCache();
+else initArchiveUI();
 
 async function checkStartupCache(){
   if(cacheMode==='never')return; // user opted out
@@ -899,7 +1195,7 @@ dropZone.addEventListener('drop',e=>{
   e.preventDefault();dropZone.classList.remove('over');
   if(e.dataTransfer.files.length)loadFiles(Array.from(e.dataTransfer.files));
 });
-$('reset-btn').addEventListener('click',()=>{showUpload();fileInput.value='';resetState();resetCC();appMode='export';});
+$('reset-btn').addEventListener('click',()=>{if(activeArchive||nativeArchives){showArchivePanel();return;}showUpload();fileInput.value='';resetState();resetCC();appMode='export';});
 $('back-btn').addEventListener('click',()=>{showDetail(false);clearSearch()});
 // v5.6: Claude Code 入口 + 模式切换
 $('cc-btn').addEventListener('click',openClaudeCodeDir);
@@ -924,6 +1220,7 @@ function resetState(){
 
 // 载入内置演示数据（供在线体验 / 截图，无需真实导出）
 function loadDemo(){
+  activeArchive=null;appMode='export';setAnnotationContext();
   resetState();
   appData.convs=DEMO_DATA.convs||[];
   appData.projects=DEMO_DATA.projects||[];
@@ -934,6 +1231,7 @@ function loadDemo(){
 
 // ── LOAD FILES ─────────────────────────────────────────
 async function loadFiles(files){
+  if(activeArchive){showArchivePanel();$('archive-status').textContent='档案原件为只读。请添加另一份 ZIP，或选择临时查看以导入其他文件。';return;}
   showLoad('解析文件中…');
   try{
     for(const f of files){
@@ -948,24 +1246,24 @@ async function loadFiles(files){
   }catch(err){hideLoad();alert('解析失败：'+err.message);console.error(err)}
 }
 
-async function parseZip(file){
+async function parseZip(file,target=appData){
   const zip=await JSZip.loadAsync(file);
   const zfiles=Object.values(zip.files).filter(f=>!f.dir);
   loadingMsg.textContent='解析 ZIP（'+zfiles.length+' 个文件）…';
   for(const zf of zfiles){
     if(!zf.name.endsWith('.json'))continue;
     let data;try{data=JSON.parse(await zf.async('string'));}catch{continue;}
-    classifyJson(zf.name.split('/').pop(),data,zf.name);
+    classifyJson(zf.name.split('/').pop(),data,zf.name,target);
   }
 }
 
-function classifyJson(name,data,fullPath){
-  if(name==='conversations.json'&&Array.isArray(data))appData.convs=[...appData.convs,...data];
-  else if(name==='users.json'&&Array.isArray(data))appData.account=data[0]||null;
-  else if(name==='memories.json'&&Array.isArray(data))appData.memories=data[0]||null;
+function classifyJson(name,data,fullPath,target=appData){
+  if(name==='conversations.json'&&Array.isArray(data))target.convs=[...target.convs,...data];
+  else if(name==='users.json'&&Array.isArray(data))target.account=data[0]||null;
+  else if(name==='memories.json'&&Array.isArray(data))target.memories=data[0]||null;
   else if((fullPath&&fullPath.includes('projects/')||!fullPath)&&name.match(/^[0-9a-f-]+\.json$/i)
     &&typeof data==='object'&&data.uuid&&data.prompt_template!==undefined)
-    appData.projects.push(data);
+    target.projects.push(data);
 }
 
 function classifyMd(filename,text){
@@ -1040,14 +1338,16 @@ function showSavePrompt(){
   modalOverlay.classList.add('show');
 }
 
-function doSaveCache(){
-  isCached=true;updateCacheBar();
-  // async, non-blocking
-  setTimeout(()=>{dbSave(appData);},400);
+async function doSaveCache(){
+  if(activeArchive)return;
+  const snapshot=appData;
+  try{await dbSave(snapshot);if(!activeArchive&&appData===snapshot){isCached=true;updateCacheBar();}}
+  catch(error){alert('缓存保存失败：'+error.message);}
 }
 
 function updateCacheBar(){
   cacheBar.style.display='flex';
+  if(activeArchive){cacheStatus.textContent='📦 ZIP 原件 · '+activeArchive.name;cacheClearBtn.style.display='none';return;}
   if(isCached){
     cacheStatus.textContent='💾 本地已缓存';
     cacheClearBtn.style.display='';
@@ -1058,6 +1358,7 @@ function updateCacheBar(){
 }
 
 cacheClearBtn.addEventListener('click',async()=>{
+  if(activeArchive)return;
   await dbClear();
   isCached=false;
   localStorage.removeItem('cv_cachemode');cacheMode='';
@@ -1205,14 +1506,14 @@ function renderConvList(){
 function toggleFav(uuid,card,btn){
   if(favorites.has(uuid)){favorites.delete(uuid);btn.textContent='☆';btn.classList.remove('on');card.classList.remove('fav-card');}
   else{favorites.add(uuid);btn.textContent='⭐';btn.classList.add('on');card.classList.add('fav-card');}
-  localStorage.setItem('cv_favs',JSON.stringify([...favorites]));
+  persistAnnotations();
 }
 
 function removeTag(uuid,tag){
   if(!tags[uuid])return;
   tags[uuid]=tags[uuid].filter(t=>t!==tag);
   if(!tags[uuid].length)delete tags[uuid];
-  localStorage.setItem('cv_tags',JSON.stringify(tags));
+  persistAnnotations();
 }
 
 function showTagInput(uuid,ctags,addT){
@@ -1224,7 +1525,7 @@ function showTagInput(uuid,ctags,addT){
     const v=inp.value.trim();
     if(v){
       if(!tags[uuid])tags[uuid]=[];
-      if(!tags[uuid].includes(v)){tags[uuid].push(v);localStorage.setItem('cv_tags',JSON.stringify(tags));}
+      if(!tags[uuid].includes(v)){tags[uuid].push(v);persistAnnotations();}
     }
     wrap.remove();renderConvList();
   };
@@ -1394,7 +1695,7 @@ function diagHtml(){
       <tr><th>对话名称</th><th>空/总</th><th title="Claude 连续多少轮没有回复——即对话看起来「只剩你一个人说话」的长度">连续无回复</th></tr>
       ${d.affected.slice(0,10).map(a=>`<tr>
         <td class="tc-name" title="${esc(a.uuid)}" style="cursor:pointer"
-          onclick="openConvById('${a.uuid}')">${esc(a.name)}${a.allEmpty?' <span style="color:var(--t3)">（全空）</span>':''}</td>
+          data-open-conv="${esc(a.uuid)}">${esc(a.name)}${a.allEmpty?' <span style="color:var(--t3)">（全空）</span>':''}</td>
         <td>${a.empty}/${a.total}</td><td>${a.run}</td>
       </tr>`).join('')}
     </table>
@@ -1402,7 +1703,7 @@ function diagHtml(){
       按月分布：${mos.map(m=>`${m} <b>${d.byMonth[m].e}</b>/${d.byMonth[m].t}`).join('　·　')}
       <br>集中在个别月份说明是平台阶段性故障，而非你的数据或本工具的问题。</div>`:''}
     <button id="diag-copy" class="action-btn" style="margin-top:10px;opacity:1"
-      onclick="copyDiag()">📋 复制体检报告</button>
+      data-copy-diag>📋 复制体检报告</button>
   </div>`;
 }
 
@@ -1468,7 +1769,7 @@ function renderStats(){
         <tr><th>对话名称</th><th>消息数</th><th>思考块</th><th>最后活跃</th></tr>
         ${topConvs.map(c=>`<tr>
           <td class="tc-name" title="${esc(c.name)}" style="cursor:pointer"
-            onclick="openConvById('${c.uuid}')">${esc(c.name)}</td>
+            data-open-conv="${esc(c.uuid)}">${esc(c.name)}</td>
           <td>${c.msgCount}</td><td>${c.thinkCount}</td><td>${fmtDate(c.lastActive)}</td>
         </tr>`).join('')}
       </table>
@@ -1682,7 +1983,7 @@ function renderMemoryPanel(item){
   const m=appData.globalMemory[item.idx];
   staticPanel.innerHTML=`<div class="panel-title" style="display:flex;align-items:center;justify-content:space-between">
     <span>🌐 ${esc(m.filename.replace(/\.md$/i,''))}</span>
-    <button class="exp-btn" onclick="exportMemMd(${item.idx})" style="font-size:11px">↓ 导出</button>
+    <button class="exp-btn" data-export-memory="${item.idx}" style="font-size:11px">↓ 导出</button>
   </div><div class="section-card"><div class="mem-md">${marked.parse(m.text)}</div></div>`;
 }
 
@@ -1738,7 +2039,7 @@ function isEmptyMsg(m){return!msgText(m).trim()}
 
 let _openCallback=null;
 function openConv(uuid,callback){
-  const raw=appData.convs.find(c=>c.uuid===uuid)||ccConvCache.get(uuid);if(!raw)return;
+  const raw=appMode==='cc'?ccConvCache.get(uuid):appData.convs.find(c=>c.uuid===uuid);if(!raw)return;
   curConv=raw;_openCallback=callback||null;
   // Linear message list (all messages in chronological order)
   // v5.7: 保留空消息。此前 filter 掉会把"Claude 当时没输出"显示成"消息不存在"，
@@ -1749,7 +2050,7 @@ function openConv(uuid,callback){
   else detailTitle.textContent=_t;
   clearSearch();initVS();showDetail(true);vp.scrollTop=0;
   toggleSrchSidebar(false);updateScrollBtns();buildNavRail();
-  if(_openCallback)setTimeout(()=>{_openCallback();_openCallback=null;},150);
+  if(_openCallback){const scheduled=_openCallback,conversation=curConv;setTimeout(()=>{if(curConv===conversation&&_openCallback===scheduled){scheduled();_openCallback=null;}},150);}
 }
 
 // ── v5.3: 对话导航条 ───────────────────────────────────
@@ -2618,6 +2919,7 @@ async function openClaudeCodeDir(){
 }
 
 function applyMode(){
+  setAnnotationContext();
   const cc=appMode==='cc';
   $('tabs').style.display=cc?'none':'flex';
   $('cc-tabs').style.display=cc?'flex':'none';
@@ -2744,8 +3046,16 @@ async function doCCSearch(){
   if(results.length>100){const more=document.createElement('div');more.className='empty-hint';more.textContent=`仅显示前100条，共${results.length}条`;el.appendChild(more);}
 }
 
+document.addEventListener('click',event=>{
+  const control=event.target.closest('[data-open-conv],[data-copy-diag],[data-export-memory]');
+  if(!control)return;
+  if(control.hasAttribute('data-open-conv'))window.openConvById(control.dataset.openConv);
+  else if(control.hasAttribute('data-copy-diag'))window.copyDiag();
+  else window.exportMemMd(Number(control.dataset.exportMemory));
+});
+
 // ── HELPERS ───────────────────────────────────────────
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 function fmtTok(n){n=n||0;if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'k';return String(n);}
 function fmtDate(iso){
   if(!iso)return'';try{const d=new Date(iso);return d.toLocaleDateString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit'});}catch{return iso;}

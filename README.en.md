@@ -25,6 +25,7 @@ A single-file HTML tool for viewing and analyzing your personal data exported fr
 | Drop / pick `.md` | Import custom global-memory files |
 | Empty-chat handling | Conversations with no messages at all are hidden; conversations whose messages are all empty are collapsed by default and expand in one click (no longer silently dropped since v5.7) |
 | Local persistent cache | Optionally save to the browser to skip re-importing next time |
+| ZIP archive library | Keep original ZIPs, switch between isolated archives, and retrieve the originals at any time; an optional macOS App is available |
 
 ### Claude Code Local Sessions (added in v5.6)
 | Feature | Notes |
@@ -134,7 +135,13 @@ Double-click `claude_viewer.html` to open it in your browser.
 > Safari can view conversations fine, but PDF export is limited.
 
 ### Step 3: Import your data
-**Drag the `.zip` directly** onto the page to parse everything automatically. After a successful import you can choose whether to save it locally.
+In the browser edition, **drag the `.zip` directly** onto the page to parse everything automatically. After a successful import you can choose whether to save it locally. This retains the original temporary viewing workflow, including importing more files to view them together.
+
+For long-term storage of exports from multiple accounts, use the ZIP import in the archive library (「档案库」). Each ZIP becomes a separate archive, and only the selected archive is loaded. Conversations, account data, projects, memories, favorites, and tags switch with the archive. See [ZIP archives and the optional macOS App](docs/ARCHIVES.md#english).
+
+### Optional: Build a macOS App
+
+The single HTML file continues to work without an App. On a Mac, the repository's build script can create a standalone `ClaudeViewer.app` for Apple Silicon or Intel. It reuses the same viewer and stores original ZIPs in `~/Library/Application Support/ClaudeViewer/Archives`. Double-clicking the App restores the last selected archive. See the [macOS build, backup, and uninstall instructions](docs/ARCHIVES.md#macos-app-english).
 
 ---
 
@@ -167,11 +174,11 @@ ClaudeViewer renders the **LaTeX text Claude writes in the message body**:
 
 ## 🔒 Privacy
 
-- **Fully local**: all data is processed only in your browser, never sent to any server
-- **Zero external requests**: since v5.2, marked.js, JSZip, KaTeX and its fonts are all inlined into the single file — opening the page makes no request to any CDN or third party, and it works fully offline
-- **No persistence by default**: unless you explicitly choose "save locally"
-- **IndexedDB cache**: if you save, data lives in this device's browser, readable only locally, clearable anytime
-- **localStorage**: favorites, tags, dark mode, cache preference, collapse-empty-chats preference (no conversation content)
+Imported data is processed locally and is never uploaded to a server. Since v5.2, marked.js, JSZip, KaTeX, and its fonts are inlined into the HTML file, so the page needs no CDN requests to load dependencies and works offline.
+
+The original temporary viewing mode saves parsed data only when you choose “save locally.” Importing into the new archive library explicitly saves the original ZIP and its archive information. The browser edition uses a separate IndexedDB database; the macOS App uses `~/Library/Application Support/ClaudeViewer/Archives`. Archive favorites and tags are saved separately without modifying the ZIP. localStorage still holds interface preferences such as the theme and the original temporary mode's favorites and tags.
+
+Clearing browser site data, browser storage eviction, or switching browsers can make browser archives unavailable, so keep your own ZIP backups. The App's data directory is separate from the `.app`; ordinary deletion of the App does not delete that directory. See the [archive guide](docs/ARCHIVES.md#english) for original-file retrieval and full backups.
 
 ---
 
@@ -199,7 +206,7 @@ ClaudeViewer renders the **LaTeX text Claude writes in the message body**:
 | Safari (Mac) | ✅ | ⚠️ Limited | ✅ | — |
 
 > **Safari note**: Safari sometimes auto-unzips downloaded ZIPs. If so, right-click the extracted folder → Compress, or disable "Open safe files after downloading" in Safari settings.
-> **Local cache note**: When opened from local `file://`, Chrome/Edge treat all local files as one origin, sharing a single IndexedDB (moving/renaming the file keeps data, but isolation between local HTML files is weak). Firefox differs. For long-term storage, back up with "↓ Export All".
+> **Local storage note**: Storage behavior for `file://` pages varies between browsers. Keep using the same browser and viewer location, and separately back up your original ZIPs. The archive library’s “Retrieve original ZIP” (「取出原始 ZIP」) preserves the imported file’s bytes. “↓ Export All” creates a collection of Markdown files and is not a backup of the original export package.
 
 ---
 
@@ -243,7 +250,7 @@ You can also verify by hand: unzip the export, open `conversations.json` in a te
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Whole stretches of history missing | The `batch-0000` in the export filename means it is sharded; large accounts also get `batch-0001`, `batch-0002`, … | Import every shard ZIP |
+| Whole stretches of history missing | The `batch-0000` in the export filename means it is sharded; large accounts also get `batch-0001`, `batch-0002`, … | Import every shard ZIP together in the original temporary viewing mode; the archive library currently views each ZIP separately |
 | Multiple answers to the same question | You edited a prompt or hit "regenerate"; the export contains all branches | Expected, not data loss |
 | Attachment contents unavailable | The export only carries attachment uuid references, not the files themselves | Platform limitation, unrecoverable |
 
