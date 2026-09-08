@@ -84,13 +84,14 @@ body{background:var(--bg);color:var(--t1);font-family:var(--fb);font-size:14px;l
 .u-title{font-family:var(--fd);font-size:26px;font-weight:700;letter-spacing:-.01em}
 .u-sub{color:var(--t3);font-size:13px}
 .drop-zone{border:2px dashed var(--bd);border-radius:24px;padding:40px 52px;
+  width:min(560px,100%);margin-left:auto;margin-right:auto; /* v6.0: 定宽，避免提示文字断在词中间 */
   text-align:center;cursor:pointer;transition:all .2s;background:var(--sur);
   box-shadow:0 4px 24px var(--sh);max-width:460px;width:100%}
 .drop-zone:hover,.drop-zone.over{border-color:var(--primary);background:var(--pl);
   box-shadow:0 8px 32px rgba(217,119,87,.12)}
 .drop-icon{font-size:38px;margin-bottom:12px}
 .drop-label{color:var(--t2);font-size:14px;margin-bottom:4px}
-.drop-hint{color:var(--t3);font-size:12px;margin-bottom:20px}
+.drop-hint{color:var(--t3);font-size:12px;line-height:1.8;margin-bottom:20px}
 code.tag{background:var(--pl);color:var(--pd);padding:1px 7px;border-radius:4px;font-family:var(--fm);font-size:12px}
 .pick-btn{display:inline-block;background:var(--primary);color:#fff;
   padding:10px 28px;border-radius:9999px;cursor:pointer;font-size:14px;
@@ -676,8 +677,8 @@ mark.hl.cur{background:var(--primary);color:#fff}
   <div class="drop-zone" id="drop-zone">
     <div class="drop-icon">📦</div>
     <div class="drop-label">拖入 Claude 导出的<strong>整个文件夹</strong></div>
-    <div class="drop-hint">新版导出是 <code class="tag">manifest</code> + 多个 <code class="tag">.zip</code>，整个文件夹丢进来就行<br>
-      旧版单个 <code class="tag">.zip</code>、单独的 <code class="tag">conversations.json</code> 或 <code class="tag">.md</code> 记忆文件同样支持</div>
+    <div class="drop-hint">新版导出是 <code class="tag">manifest</code> + 多个 <code class="tag">.zip</code>，整包丢进来即可<br>
+      旧版单 <code class="tag">.zip</code>、<code class="tag">conversations.json</code>、<code class="tag">.md</code> 也支持</div>
     <div class="pick-row">
       <button type="button" class="pick-btn" id="pick-dir">📁 选择导出文件夹</button>
       <label for="file-input" class="pick-btn ghost" id="pick-label">选择单个文件</label>
