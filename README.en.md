@@ -15,6 +15,54 @@ A single-file HTML tool for viewing and analyzing your personal data exported fr
 
 ---
 
+## 🚀 Quick Start
+
+### Step 1: Export your data from Claude
+
+1. Open [claude.ai](https://claude.ai) and sign in
+2. Avatar → **Settings** → **Privacy** → **Export data**
+3. Click **Export** and wait for the email (usually within minutes)
+4. The email gives you a **`manifest-….json`** listing **5 download links** — download **all five files**
+
+> ⚠️ **Each link in the manifest works only once.** Download all five in one go; a missing file cannot be re-fetched and forces a fresh export.
+
+### Step 2: Put everything into one folder
+
+**Keep the 5 `.zip` files and the `manifest-….json` together — do not delete the manifest.**
+
+![Export folder](assets/files.png)
+
+The manifest is the only way to tell whether **every shard is present** — with a large history `conversations` is split into `-000` / `-001` / `-002`, and nothing else knows how many parts there should be. The folder should contain:
+
+| File | Content |
+|---|---|
+| `conversations-000.zip` | All conversations (messages, timestamps, thinking, attachments) |
+| `projects-000.zip` | Projects (name, system prompt, docs) |
+| `memories-000.zip` | Personal memory, project memory, memory files |
+| `feedback-000.zip` | Claude's official monthly reflection |
+| `light_metadata-000.zip` | Account info, login history |
+| `manifest-….json` | The manifest (used for completeness checks — **keep it**) |
+
+> The folder name is up to you; a date works well (e.g. `20260907-claude-backup`) — it becomes the default name of this archive in the archive library.
+
+### Step 3: Open the viewer
+
+Double-click `claude_viewer.html` to open it in your browser.
+
+> **Recommended browsers**: Chrome / Edge
+> Safari can view conversations fine, but PDF export is limited.
+
+### Step 4: Click "📁 Pick export folder"
+
+On the upload screen click **"📁 Pick export folder"** and select the folder from step 2 — all five ZIPs are parsed in one pass. **You can also drag the whole folder onto the page.**
+
+- If a shard is missing, the viewer names **exactly which file** is absent
+- After a successful import you can choose **"📚 Add to archive library"** to keep the whole set of original files, ready to switch back to or take out untouched at any time
+
+> **Legacy single ZIP is still fully supported**: for exports from before September 2026, drag the `.zip` onto the page or use "Pick a single file".
+
+---
+
 ## ✨ Features
 
 ### Data Import
@@ -121,25 +169,6 @@ A single-file HTML tool for viewing and analyzing your personal data exported fr
 | ![Memory](assets/mem.png) | ![Tool calls](assets/tool.png) |
 | **LaTeX rendering** | **Dark mode** |
 | ![LaTeX rendering](assets/latex.png) | ![Dark mode](assets/dark.png) |
-
----
-
-## 🚀 Quick Start
-
-### Step 1: Get your Claude export
-1. Open [claude.ai](https://claude.ai) and sign in
-2. Avatar → **Settings** → **Privacy** → **Export data**
-3. Click **Export** and wait for the email (usually within minutes)
-4. Download the `.zip` from the email
-
-### Step 2: Open the viewer
-Double-click `claude_viewer.html` to open it in your browser.
-
-> **Recommended browsers**: Chrome / Edge
-> Safari can view conversations fine, but PDF export is limited.
-
-### Step 3: Import your data
-**Drag the `.zip` directly** onto the page to parse everything automatically. After a successful import you can choose whether to save it locally.
 
 ---
 
