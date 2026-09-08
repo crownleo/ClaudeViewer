@@ -17,6 +17,13 @@
 -->
 <meta name="author" content="crownleo (kingguan4)">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
+<!-- v6.0 安全加固：把 ROADMAP 的「零外部请求」交给浏览器强制执行。
+     default-src 'none' + connect-src 'none' 意味着本页无法向任何服务器发请求——
+     既挡住误加的 CDN / 外部字体，也让万一出现的 XSS 无法把对话内容外传。
+     data:/blob: 是内联 KaTeX 字体与本地导出下载所必需。
+     副作用：对话正文里指向外部站点的 Markdown 图片将不再加载（这本就是一个跟踪与泄露渠道）。
+     思路来自 PR #3 (@LiuHangyuWE) 的 secure_html()。 -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:; connect-src 'none'; frame-src 'none'; child-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <!-- 不写版本号：版本号唯一来源是 JS 里的 APP_VERSION，运行时覆盖 document.title -->
 <title>Claude 数据查看器</title>
 <!-- vendor:start — 本地内联依赖，零 CDN、离线可用（由 build/build.py 生成，勿手改此区块）-->
@@ -89,6 +96,15 @@ code.tag{background:var(--pl);color:var(--pd);padding:1px 7px;border-radius:4px;
   padding:10px 28px;border-radius:9999px;cursor:pointer;font-size:14px;
   font-weight:500;border:none;transition:background .15s;box-shadow:0 2px 8px rgba(217,119,87,.3)}
 .pick-btn:hover{background:var(--pd)}
+/* v6.0: 上传页两个入口——文件夹为主、单文件为辅 */
+.pick-row{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap}
+.pick-btn.ghost{background:transparent;color:var(--t2);border:1.5px solid var(--bd);box-shadow:none;font-size:13px;padding:9px 20px}
+.pick-btn.ghost:hover{background:var(--pl);border-color:var(--primary);color:var(--pd)}
+.man-row{display:block;width:100%;text-align:left;border:1px solid var(--bd);border-radius:10px;
+  padding:10px 13px;margin-bottom:8px;background:var(--sur);color:inherit;cursor:pointer;font:inherit;font-size:13px}
+.man-row:hover{border-color:var(--primary);background:var(--pl)}
+.man-row b{display:block;margin-bottom:2px}
+.man-row span{color:var(--t3);font-size:12px}
 .demo-btn{margin-top:14px;background:transparent;border:1px dashed var(--bd);color:var(--t3);
   padding:8px 18px;border-radius:9999px;cursor:pointer;font-size:12px;font-family:inherit;transition:all .15s}
 .demo-btn:hover{border-color:var(--primary);color:var(--pd);background:var(--pl)}
@@ -107,13 +123,18 @@ code.tag{background:var(--pl);color:var(--pd);padding:1px 7px;border-radius:4px;
 #main-screen{display:none;flex-direction:row;height:100%}
 #sidebar{width:280px;min-width:220px;flex-shrink:0;display:flex;flex-direction:column;
   height:100%;border-right:1px solid var(--bd);background:var(--sur)}
-#sidebar-header{padding:12px 14px;border-bottom:1px solid var(--bd);
-  display:flex;align-items:center;gap:8px;flex-shrink:0}
-.sh-logo{font-size:18px}
+/* v6.0: 图标按钮增至 4 个后一行放不下，标题被挤成「Clau…」、摘要折成五行，改为两行布局 */
+#sidebar-header{padding:11px 14px;border-bottom:1px solid var(--bd);
+  display:flex;flex-direction:column;gap:8px;flex-shrink:0}
+.sh-top{display:flex;align-items:center;gap:8px;min-width:0}
+.sh-logo{font-size:18px;flex-shrink:0}
 .sh-info{flex:1;min-width:0}
 .sh-title{font-family:var(--fd);font-size:15px;font-weight:700;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sh-sub{font-size:11px;color:var(--t3);margin-top:1px}
+.sh-sub{font-size:11px;color:var(--t3);margin-top:1px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sh-acts{display:flex;gap:6px}
+.sh-acts .icon-btn{flex:1;padding:5px 0;text-align:center}
 .icon-btn{background:none;border:1px solid var(--bd);border-radius:8px;
   padding:5px 9px;color:var(--t2);cursor:pointer;font-size:13px;
   transition:all .15s;white-space:nowrap;flex-shrink:0}
@@ -213,6 +234,28 @@ code.tag{background:var(--pl);color:var(--pd);padding:1px 7px;border-radius:4px;
   padding:16px;text-align:center;box-shadow:0 1px 4px var(--sh)}
 .stat-num{font-family:var(--fd);font-size:28px;font-weight:700;color:var(--primary)}
 .stat-label{font-size:12px;color:var(--t3);margin-top:4px}
+/* v6.0: Claude 回顾（导出包 reflections）与登录记录 */
+.rf-hero{background:var(--sur);border:1px solid var(--bd);border-radius:14px;padding:20px 22px;margin-bottom:18px}
+.rf-hero h2{font-family:var(--fd);font-size:19px;margin:0 0 8px;color:var(--t1);line-height:1.4}
+.rf-hero p{font-size:13px;color:var(--t2);line-height:1.8;margin:0}
+.rf-period{font-size:12px;color:var(--t3);margin-bottom:6px;letter-spacing:.04em}
+.rf-topic{margin-bottom:13px}
+.rf-topic-head{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;margin-bottom:4px;gap:10px}
+.rf-topic-head b{font-weight:600;color:var(--t1)}
+.rf-topic-head em{font-style:normal;color:var(--primary);font-family:var(--fd);font-weight:700}
+.rf-track{height:7px;background:var(--sand);border-radius:4px;overflow:hidden}
+.rf-fill{height:100%;background:var(--primary);border-radius:4px}
+.rf-topic-desc{font-size:12px;color:var(--t3);margin-top:4px;line-height:1.6}
+.rf-item{border-left:3px solid var(--primary);padding:2px 0 2px 12px;margin-bottom:14px}
+.rf-item b{display:block;font-size:13px;color:var(--t1);margin-bottom:3px;line-height:1.5}
+.rf-item p{font-size:12px;color:var(--t2);line-height:1.75;margin:0}
+.rf-skill{display:inline-block;font-size:11px;color:var(--pd);background:var(--pl);
+  border-radius:9999px;padding:1px 9px;margin-bottom:4px}
+.lh-table{width:100%;border-collapse:collapse;font-size:12px}
+.lh-table th{text-align:left;color:var(--t3);font-weight:500;padding:5px 8px;border-bottom:1px solid var(--bd);white-space:nowrap}
+.lh-table td{padding:5px 8px;border-bottom:1px solid var(--bd);color:var(--t2)}
+.lh-table tr:last-child td{border-bottom:none}
+.lh-ip{font-family:var(--fm);font-size:11px;color:var(--t3)}
 .chart-wrap{background:var(--sur);border:1px solid var(--bd);border-radius:16px;
   padding:20px;margin-bottom:14px;box-shadow:0 1px 4px var(--sh);overflow-x:auto}
 .charts-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
@@ -531,6 +574,41 @@ mark.hl.cur{background:var(--primary);color:#fff}
 .modal-btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
 .modal-btn.primary:hover{background:var(--pd)}
 .modal-check{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--t3);cursor:pointer}
+/* v6.0: 档案库 —— 一份档案 = 一次完整导出（manifest + 全部 ZIP 的原始字节） */
+#arc-panel{display:none;position:fixed;inset:0;z-index:1500;background:rgba(0,0,0,.4);
+  padding:4vh 16px;overflow:auto}
+#arc-panel.show{display:block}
+.arc-sheet{max-width:720px;margin:0 auto;background:var(--bg);border:1px solid var(--bd);
+  border-radius:18px;padding:24px 26px;box-shadow:0 16px 52px rgba(0,0,0,.28)}
+.arc-head{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.arc-head .arc-title{font-family:var(--fd);font-size:19px;font-weight:700;flex:1}
+.arc-desc{font-size:12px;color:var(--t3);line-height:1.75;margin-bottom:16px}
+.arc-actions{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.arc-actions .pick-btn{font-size:13px;padding:9px 20px}
+#arc-status{font-size:12px;color:var(--pd);min-height:18px;margin-bottom:6px;white-space:pre-wrap}
+#arc-storage{font-size:11px;color:var(--t3);line-height:1.7;margin-bottom:12px;
+  border:1px dashed var(--bd);border-radius:10px;padding:9px 12px}
+#arc-storage b{color:var(--t2)}
+#arc-storage .ok{color:#4f7a4d}
+#arc-storage .warn{color:#c0554a}
+.arc-row{border:1px solid var(--bd);border-radius:12px;padding:13px 15px;margin-bottom:10px;background:var(--sur)}
+.arc-row.on{border-color:var(--primary);background:var(--pl)}
+.arc-name{font-size:14px;font-weight:600;color:var(--t1);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.arc-badge{font-size:11px;font-weight:500;color:#fff;background:var(--primary);border-radius:9999px;padding:1px 9px}
+.arc-meta{font-size:11px;color:var(--t3);margin:4px 0 9px}
+.arc-btns{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.arc-btn{border:1px solid var(--bd);border-radius:8px;padding:5px 11px;background:var(--bg);
+  color:var(--t2);cursor:pointer;font:inherit;font-size:12px;transition:.15s}
+.arc-btn:hover{border-color:var(--primary);color:var(--pd);background:var(--pl)}
+.arc-btn.danger:hover{border-color:#c0554a;color:#c0554a;background:transparent}
+.arc-btn:disabled{opacity:.45;cursor:wait}
+.arc-rename{border:1px solid var(--bd);border-radius:8px;padding:5px 9px;font:inherit;font-size:12px;
+  background:var(--bg);color:var(--t1);max-width:170px}
+.arc-files{margin-top:8px;font-size:11px;color:var(--t3);display:flex;gap:6px;flex-wrap:wrap}
+.arc-file{border:1px dashed var(--bd);border-radius:7px;padding:2px 8px;cursor:pointer;background:transparent;
+  color:var(--t3);font:inherit;font-size:11px}
+.arc-file:hover{border-color:var(--primary);color:var(--pd)}
+.arc-empty{font-size:13px;color:var(--t3);text-align:center;padding:26px 10px}
 .modal-note{font-size:11px;color:var(--t3);margin-top:10px;line-height:1.5;
   background:var(--bg);padding:8px 11px;border-radius:8px}
 
@@ -597,14 +675,19 @@ mark.hl.cur{background:var(--primary);color:#fff}
   </div>
   <div class="drop-zone" id="drop-zone">
     <div class="drop-icon">📦</div>
-    <div class="drop-label">拖放 <code class="tag">.zip</code> 导出包或 <code class="tag">conversations.json</code></div>
-    <div class="drop-hint">支持 ZIP 整包 / JSON / Markdown (.md) 记忆文件</div>
-    <label for="file-input" class="pick-btn" id="pick-label">选择文件</label>
+    <div class="drop-label">拖入 Claude 导出的<strong>整个文件夹</strong></div>
+    <div class="drop-hint">新版导出是 <code class="tag">manifest</code> + 多个 <code class="tag">.zip</code>，整个文件夹丢进来就行<br>
+      旧版单个 <code class="tag">.zip</code>、单独的 <code class="tag">conversations.json</code> 或 <code class="tag">.md</code> 记忆文件同样支持</div>
+    <div class="pick-row">
+      <button type="button" class="pick-btn" id="pick-dir">📁 选择导出文件夹</button>
+      <label for="file-input" class="pick-btn ghost" id="pick-label">选择单个文件</label>
+    </div>
     <input type="file" id="file-input" accept=".json,.zip,.md,.markdown" multiple>
   </div>
+  <button id="arc-btn" class="cc-entry-btn" type="button">📚 打开档案库（保存多次导出，随时切换）</button>
   <button id="cc-btn" class="cc-entry-btn" type="button">📂 打开 Claude Code 本地对话</button>
   <button id="demo-btn" class="demo-btn" type="button">✨ 没有数据？载入示例数据体验</button>
-  <div class="u-note">对话 · 项目 · 记忆 · 账户 · 统计 · 全局搜索 · 收藏标签 · 深色模式 · 一键复制 · 工具调用 · 对话导航<br>📂 Claude Code 本地会话（只读浏览 · 项目分组 · Token 统计 · 导出 MD）</div>
+  <div class="u-note">对话 · 项目 · 记忆 · 回顾 · 账户 · 统计 · 全局搜索 · 收藏标签 · 深色模式 · 一键复制 · 工具调用 · 对话导航<br>📦 支持 Claude 新版分片导出（manifest + 多 ZIP）与旧版单 ZIP<br>📂 Claude Code 本地会话（只读浏览 · 项目分组 · Token 统计 · 导出 MD）</div>
   <div class="u-credit">
     作者 <span class="cr-id">crownleo</span> · 小红书 <span class="cr-id">kingguan4</span><br>
     <a href="https://github.com/crownleo/" target="_blank" rel="noopener">GitHub</a> ·
@@ -617,14 +700,19 @@ mark.hl.cur{background:var(--primary);color:#fff}
 <div id="main-screen">
   <div id="sidebar">
     <div id="sidebar-header">
-      <div class="sh-logo">🗂️</div>
-      <div class="sh-info">
-        <div class="sh-title">Claude 数据</div>
-        <div class="sh-sub" id="sh-sub">—</div>
+      <div class="sh-top">
+        <div class="sh-logo">🗂️</div>
+        <div class="sh-info">
+          <div class="sh-title">Claude 数据</div>
+          <div class="sh-sub" id="sh-sub">—</div>
+        </div>
       </div>
+      <div class="sh-acts">
+      <button class="icon-btn" id="arc-open-btn" title="档案库">📚</button>
       <button class="icon-btn" id="mode-switch" title="打开/切换 Claude Code 会话">⇄</button>
       <button class="icon-btn" id="dark-btn" title="切换深色模式">🌙</button>
       <button class="icon-btn" id="reset-btn" title="重新导入">↩</button>
+      </div>
     </div>
     <div id="tabs">
       <div class="tab active" data-tab="convs">💬</div>
@@ -632,6 +720,7 @@ mark.hl.cur{background:var(--primary);color:#fff}
       <div class="tab" data-tab="stats">📊</div>
       <div class="tab" data-tab="projects">📁</div>
       <div class="tab" data-tab="memories">🧠</div>
+      <div class="tab" data-tab="reflect">🪞</div>
       <div class="tab" data-tab="account">👤</div>
     </div>
     <div id="cc-tabs" style="display:none">
@@ -689,6 +778,25 @@ mark.hl.cur{background:var(--primary);color:#fff}
     </div>
   </div>
 </div>
+<div id="arc-panel">
+  <div class="arc-sheet">
+    <div class="arc-head">
+      <div class="arc-title">📚 档案库</div>
+      <button class="arc-btn" id="arc-close">返回查看器</button>
+    </div>
+    <div class="arc-desc">一份档案 = <strong>一次完整导出</strong>（manifest + 全部 ZIP），保存的是<strong>原始字节</strong>，随时可原样取出。切换档案时对话、项目、记忆、回顾、账户以及收藏和标签一起切换，互不干扰。<br><strong>档案存在此浏览器本地，不上传。</strong>浏览器的「清除浏览数据 / 清除站点数据」会连同档案库一起清空——这是浏览器行为，网页无法阻止。所以：<strong>请始终把 Claude 导出的原始文件留在磁盘或网盘上</strong>，档案库是为了「随时切换、随时查」，不是唯一的备份。需要时可用下面每份档案的「↓ 导出整套」把原件原样取回。</div>
+    <div class="arc-actions">
+      <button type="button" class="pick-btn" id="arc-add-dir">📁 添加导出文件夹</button>
+      <button type="button" class="pick-btn ghost" id="arc-add-zip">添加 ZIP / JSON</button>
+      <button type="button" class="arc-btn" id="arc-temp">临时查看（不入库）</button>
+      <input type="file" id="arc-zip-input" accept=".zip,.json,.md,.markdown" multiple style="display:none">
+    </div>
+    <div id="arc-status"></div>
+    <div id="arc-storage"></div>
+    <div id="arc-list"></div>
+  </div>
+</div>
+
 <div id="modal-overlay">
   <div class="modal">
     <div class="modal-title" id="modal-title">数据导入成功</div>
@@ -713,14 +821,14 @@ mark.hl.cur{background:var(--primary);color:#fff}
 (function(){
 'use strict';
 // ── 版本号（发版只改这一处，标题与徽章自动同步）──
-const APP_VERSION='v5.7';
-const DEMO_DATA=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob("eyJhY2NvdW50IjogeyJ1dWlkIjogImRlbW8tdXNlciIsICJmdWxsX25hbWUiOiAi5bCP5p+v77yI56S65L6L77yJIiwgImVtYWlsX2FkZHJlc3MiOiAiZGVtb0BjbGF1ZGV2aWV3ZXIuYXBwIiwgInZlcmlmaWVkX3Bob25lX251bWJlciI6IG51bGx9LCAibWVtb3JpZXMiOiB7ImNvbnZlcnNhdGlvbnNfbWVtb3J5IjogIioq5YWz5LqO5L2gKipcblxu5bCP5p+v5piv5LiA5ZCN5Lqn5ZOB6K6+6K6h5biI77yM5Zac5qyi566A5rSB5aW955So55qE5bel5YW377yM5pel5bi455SoIENsYXVkZSDlpITnkIblhpnkvZzjgIHnv7vor5HjgIHku6PnoIHniYfmrrXlkozotYTmlpnmlbTnkIbjgIJcblxuKirlgY/lpb0qKlxuXG7llpzmrKLmnoHnroDorr7orqHkuI7lvIDmupDlt6XlhbfvvIzkuaDmg6/miorph43opoHlr7nor53mnKzlnLDlrZjmoaPvvJvkvb/nlKggTWFj77yM5YGP5aW95rex6Imy5qih5byP44CCXG5cbioq5pyA6L+R5Zyo5YGaKipcblxu5Zyo5pW055CG5LiOIEFJIOeahOWOhuWPsuWvueivne+8jOWvu+aJvuiDveacrOWcsOaJk+W8gOOAgeaQnOe0ouOAgeWvvOWHuueahOeuoeeQhuaWueW8j++8jOeci+mHjeOAjOaVsOaNruS4jeS4iuS8oOOAgeWujOWFqOacrOWcsOOAjeOAgiIsICJwcm9qZWN0X21lbW9yaWVzIjogeyJwcm9qLTEiOiAi6K+l6aG555uu55So5LqO5Lqn5ZOB6K6+6K6h5ZKo6K+i77ya5bCP5p+v5bi46Zeu5Lqk5LqS5rWB56iL44CB5paH5qGI5o6q6L6e5LiO56ue5ZOB5YiG5p6Q77yM5YGP5aW955u05o6l57uZ57uT6K6644CCIn0sICJhY2NvdW50X3V1aWQiOiAiZGVtby11c2VyIn0sICJwcm9qZWN0cyI6IFt7InV1aWQiOiAicHJvai0xIiwgIm5hbWUiOiAi5Lqn5ZOB6K6+6K6h5Yqp5omLIiwgImRlc2NyaXB0aW9uIjogIuaXpeW4uOiuvuiuoeW3peS9nOeahCBBSSDliqnmiYsiLCAiaXNfcHJpdmF0ZSI6IHRydWUsICJpc19zdGFydGVyX3Byb2plY3QiOiBmYWxzZSwgInByb21wdF90ZW1wbGF0ZSI6ICLkvaDmmK/kuIDkvY3otYTmt7Hkuqflk4Horr7orqHpob7pl67vvIzlm57nrZTnroDmtIHjgIHnu5nnu5PorrrjgIHlv4XopoHml7bphY3kuIDlj6XnkIbnlLHjgIIiLCAiY3JlYXRlZF9hdCI6ICIyMDI2LTA2LTAxVDA4OjAwOjAwKzAwOjAwIiwgInVwZGF0ZWRfYXQiOiAiMjAyNi0wNi0xMFQwODowMDowMCswMDowMCIsICJjcmVhdG9yIjogeyJ1dWlkIjogImRlbW8tdXNlciIsICJmdWxsX25hbWUiOiAi5bCP5p+v77yI56S65L6L77yJIn0sICJkb2NzIjogW3sidXVpZCI6ICJkb2MtMSIsICJmaWxlbmFtZSI6ICLorr7orqHop4TojIMubWQiLCAiY29udGVudCI6ICIjIOiuvuiuoeinhOiMg1xuXG4tIOS4u+iJsu+8muaaluapmSAjRDk3NzU3XG4tIOWchuinku+8mjEycHhcbi0g5Y6f5YiZ77ya55WZ55m95YWF6Laz44CB5bGC57qn5riF5pmwIiwgImNyZWF0ZWRfYXQiOiAiMjAyNi0wNi0wMVQwODowNTowMCswMDowMCJ9XX1dLCAiY29udnMiOiBbeyJ1dWlkIjogImNvbnYtYSIsICJuYW1lIjogIuS6jOasoeaWueeoi+S4juWIpOWIq+W8jyIsICJzdW1tYXJ5IjogIiIsICJjcmVhdGVkX2F0IjogIjIwMjYtMDYtMjBUMDk6MDA6MDArMDA6MDAiLCAidXBkYXRlZF9hdCI6ICIyMDI2LTA2LTIwVDA5OjAzOjE2KzAwOjAwIiwgImFjY291bnQiOiB7InV1aWQiOiAiZGVtby11c2VyIn0sICJjaGF0X21lc3NhZ2VzIjogW3sidXVpZCI6ICJ1ODUxNTU4IiwgInNlbmRlciI6ICJodW1hbiIsICJjcmVhdGVkX2F0IjogIjIwMjYtMDYtMjBUMDk6MDA6MDArMDA6MDAiLCAidXBkYXRlZF9hdCI6ICIyMDI2LTA2LTIwVDA5OjAwOjAwKzAwOjAwIiwgInRleHQiOiAi5biu5oiR55So5YWs5byP6Kej6YeK5LiA5LiL5LqM5qyh5pa556iL55qE5rGC5qC55YWs5byPIiwgImNvbnRlbnQiOiBbeyJ0eXBlIjogInRleHQiLCAidGV4dCI6ICLluK7miJHnlKjlhazlvI/op6Pph4rkuIDkuIvkuozmrKHmlrnnqIvnmoTmsYLmoLnlhazlvI8ifV0sICJmaWxlcyI6IFtdLCAiYXR0YWNobWVudHMiOiBbXSwgInBhcmVudF9tZXNzYWdlX3V1aWQiOiBudWxsfSwgeyJ1dWlkIjogInUxMzY3ODYiLCAic2VuZGVyIjogImFzc2lzdGFudCIsICJjcmVhdGVkX2F0IjogIjIwMjYtMDYtMjBUMDk6MDA6MTIrMDA6MDAiLCAidXBkYXRlZF9hdCI6ICIyMDI2LTA2LTIwVDA5OjAwOjEyKzAwOjAwIiwgInRleHQiOiAiIiwgImNvbnRlbnQiOiBbeyJ0eXBlIjogInRoaW5raW5nIiwgInRoaW5raW5nIjogIueUqOagh+WHhiBMYVRlWCDlhpnlh7rlhazlvI/lubbop6Pph4rliKTliKvlvI/vvIzkv53mjIHnroDmtIHjgIIifSwgeyJ0eXBlIjogInRleHQiLCAidGV4dCI6ICLkuozmrKHmlrnnqIsgJGF4XjIrYngrYz0wJO+8iCRhXFxuZXEgMCTvvInnmoTmsYLmoLnlhazlvI/mmK/vvJpcblxuJCR4ID0gXFxmcmFjey1iIFxccG0gXFxzcXJ0e2JeMi00YWN9fXsyYX0kJFxuXG7lhbbkuK0gJGJeMi00YWMkIOWPqyoq5Yik5Yir5byPKirvvIzorrDkvZwgJFxcRGVsdGEk44CCIn1dLCAiZmlsZXMiOiBbXSwgImF0dGFjaG1lbnRzIjogW10sICJwYXJlbnRfbWVzc2FnZV91dWlkIjogbnVsbH0sIHsidXVpZCI6ICJ1NzIxNzEyIiwgInNlbmRlciI6ICJodW1hbiIsICJjcmVhdGVkX2F0IjogIjIwMjYtMDYtMjBUMDk6MDE6MDArMDA6MDAiLCAidXBkYXRlZF9hdCI6ICIyMDI2LTA2LTIwVDA5OjAxOjAwKzAwOjAwIiwgInRleHQiOiAi5Yik5Yir5byP5pyJ5LuA5LmI55SoIiwgImNvbnRlbnQiOiBbeyJ0eXBlIjogInRleHQiLCAidGV4dCI6ICLliKTliKvlvI/mnInku4DkuYjnlKgifV0sICJmaWxlcyI6IFtdLCAiYXR0YWNobWVudHMiOiBbXSwgInBhcmVudF9tZXNzYWdlX3V1aWQiOiBudWxsfSwgeyJ1dWlkIjogInUyNTMxMjQiLCAic2VuZGVyIjogImFzc2lzdGFudCIsICJjcmVhdGVkX2F0IjogIjIwMjYtMDYtMjBUMDk6MDE6MjArMDA6MDAiLCAidXBkYXRlZF9hdCI6ICIyMDI2LTA2LTIwVDA5OjAxOjIwKzAwOjAwIiwgInRleHQiOiAiIiwgImNvbnRlbnQiOiBbeyJ0eXBlIjogInRleHQiLCAidGV4dCI6ICLliKTliKvlvI8gJFxcRGVsdGE9Yl4yLTRhYyQg5Yaz5a6a5qC555qE5oOF5Ya177yaXG5cbi0gJFxcRGVsdGE+MCTvvJrkuKTkuKrkuI3lkIzlrp7moLlcbi0gJFxcRGVsdGE9MCTvvJrkuIDkuKrph43moLlcbi0gJFxcRGVsdGE8MCTvvJrkuKTkuKrlhbHova3lpI3moLkifV0sICJmaWxlcyI6IFtdLCAiYXR0YWNobWVudHMiOiBbXSwgInBhcmVudF9tZXNzYWdlX3V1aWQiOiBudWxsfSwgeyJ1dWlkIjogInUyOTk0ODUiLCAic2VuZGVyIjogImh1bWFuIiwgImNyZWF0ZWRfYXQiOiAiMjAyNi0wNi0yMFQwOTowMjowMCswMDowMCIsICJ1cGRhdGVkX2F0IjogIjIwMjYtMDYtMjBUMDk6MDI6MDArMDA6MDAiLCAidGV4dCI6ICLkuL7kuKogzpQg5bCP5LqOIDAg55qE5L6L5a2QIiwgImNvbnRlbnQiOiBbeyJ0eXBlIjogInRleHQiLCAidGV4dCI6ICLkuL7kuKogzpQg5bCP5LqOIDAg55qE5L6L5a2QIn1dLCAiZmlsZXMiOiBbXSwgImF0dGFjaG1lbnRzIjogW10sICJwYXJlbnRfbWVzc2FnZV91dWlkIjogbnVsbH0sIHsidXVpZCI6ICJ1OTI3Mjk2IiwgInNlbmRlciI6ICJhc3Npc3RhbnQiLCAiY3JlYXRlZF9hdCI6ICIyMDI2LTA2LTIwVDA5OjAyOjE4KzAwOjAwIiwgInVwZGF0ZWRfYXQiOiAiMjAyNi0wNi0yMFQwOTowMjoxOCswMDowMCIsICJ0ZXh0IjogIiIsICJjb250ZW50IjogW3sidHlwZSI6ICJ0ZXh0IiwgInRleHQiOiAi5q+U5aaCICR4XjIreCsxPTAk77yMJFxcRGVsdGE9MS00PS0zPDAk77yM6Kej5Li6ICR4PVxcZnJhY3stMVxccG1cXHNxcnR7M31cXCxpfXsyfSTjgIIifV0sICJmaWxlcyI6IFtdLCAiYXR0YWNobWVudHMiOiBbXSwgInBhcmVudF9tZXNzYWdlX3V1aWQiOiBudWxsfSwgeyJ1dWlkIjogInU1NjY2NzEiLCAic2VuZGVyIjogImh1bWFuIiwgImNyZWF0ZWRfYXQiOiAiMjAyNi0wNi0yMFQwOTowMzowMCswMDowMCIsICJ1cGRhdGVkX2F0IjogIjIwMjYtMDYtMjBUMDk6MDM6MDArMDA6MDAiLCAidGV4dCI6ICLpobrkvr/orrLkuIvpn6bovr7lrprnkIYiLCAiY29udGVudCI6IFt7InR5cGUiOiAidGV4dCIsICJ0ZXh0IjogIumhuuS+v+iusuS4i+mfpui+vuWumueQhiJ9XSwgImZpbGVzIjogW10sICJhdHRhY2htZW50cyI6IFtdLCAicGFyZW50X21lc3NhZ2VfdXVpZCI6IG51bGx9LCB7InV1aWQiOiAidTIxMDcxNCIsICJzZW5kZXIiOiAiYXNzaXN0YW50IiwgImNyZWF0ZWRfYXQiOiAiMjAyNi0wNi0yMFQwOTowMzoxNiswMDowMCIsICJ1cGRhdGVkX2F0IjogIjIwMjYtMDYtMjBUMDk6MDM6MTYrMDA6MDAiLCAidGV4dCI6ICIiLCAiY29udGVudCI6IFt7InR5cGUiOiAidGV4dCIsICJ0ZXh0IjogIuiuvuS4pOaguSAkeF8xLHhfMiTvvJokeF8xK3hfMj0tXFxmcmFje2J9e2F9JO+8jCR4XzEgeF8yPVxcZnJhY3tjfXthfSTjgIIifV0sICJmaWxlcyI6IFtdLCAiYXR0YWNobWVudHMiOiBbXSwgInBhcmVudF9tZXNzYWdlX3V1aWQiOiBudWxsfV19LCB7InV1aWQiOiAiY29udi1iIiwgIm5hbWUiOiAi55So5Luj56CB5b+r6YCf6K6h566XIiwgInN1bW1hcnkiOiAiIiwgImNyZWF0ZWRfYXQiOiAiMjAyNi0wNi0xOFQxNDowMDowMCswMDowMCIsICJ1cGRhdGVkX2F0IjogIjIwMjYtMDYtMThUMTQ6MDI6MjArMDA6MDAiLCAiYWNjb3VudCI6IHsidXVpZCI6ICJkZW1vLXVzZXIifSwgImNoYXRfbWVzc2FnZXMiOiBbeyJ1dWlkIjogInUyNDE0NTUiLCAic2VuZGVyIjogImh1bWFuIiwgImNyZWF0ZWRfYXQiOiAiMjAyNi0wNi0xOFQxNDowMDowMCswMDowMCIsICJ1cGRhdGVkX2F0IjogIjIwMjYtMDYtMThUMTQ6MDA6MDArMDA6MDAiLCAidGV4dCI6ICLluK7miJHnrpfkuIDkuIsgMSDliLAgMTAwIOaJgOacieaVtOaVsOeahOWSjCIsICJjb250ZW50IjogW3sidHlwZSI6ICJ0ZXh0IiwgInRleHQiOiAi5biu5oiR566X5LiA5LiLIDEg5YiwIDEwMCDmiYDmnInmlbTmlbDnmoTlkowifV0sICJmaWxlcyI6IFtdLCAiYXR0YWNobWVudHMiOiBbXSwgInBhcmVudF9tZXNzYWdlX3V1aWQiOiBudWxsfSwgeyJ1dWlkIjogInUzNzI2MTEiLCAic2VuZGVyIjogImFzc2lzdGFudCIsICJjcmVhdGVkX2F0IjogIjIwMjYtMDYtMThUMTQ6MDA6MjArMDA6MDAiLCAidXBkYXRlZF9hdCI6ICIyMDI2LTA2LTE4VDE0OjAwOjIwKzAwOjAwIiwgInRleHQiOiAiIiwgImNvbnRlbnQiOiBbeyJ0eXBlIjogInRoaW5raW5nIiwgInRoaW5raW5nIjogIueUqOaxguWSjOWFrOW8j++8jOWGjeeUqOS7o+eggemqjOivgeOAgiJ9LCB7InR5cGUiOiAidG9vbF91c2UiLCAibmFtZSI6ICJyZXBsIiwgImlucHV0IjogeyJjb2RlIjogInByaW50KHN1bShyYW5nZSgxLCAxMDEpKSkifX0sIHsidHlwZSI6ICJ0b29sX3Jlc3VsdCIsICJjb250ZW50IjogIjUwNTAifSwgeyJ0eXBlIjogInRleHQiLCAidGV4dCI6ICIxIOWIsCAxMDAg55qE5ZKM5pivICoqNTA1MCoq44CC55So5YWs5byP77yaJFxcZnJhY3tuKG4rMSl9ezJ9PVxcZnJhY3sxMDBcXHRpbWVzIDEwMX17Mn09NTA1MCTjgIIifV0sICJmaWxlcyI6IFtdLCAiYXR0YWNobWVudHMiOiBbXSwgInBhcmVudF9tZXNzYWdlX3V1aWQiOiBudWxsfSwgeyJ1dWlkIjogInUzODc3NyIsICJzZW5kZXIiOiAiaHVtYW4iLCAiY3JlYXRlZF9hdCI6ICIyMDI2LTA2LTE4VDE0OjAxOjAwKzAwOjAwIiwgInVwZGF0ZWRfYXQiOiAiMjAyNi0wNi0xOFQxNDowMTowMCswMDowMCIsICJ0ZXh0IjogIumCoyAxIOWIsCAxMDAwIOWRoiIsICJjb250ZW50IjogW3sidHlwZSI6ICJ0ZXh0IiwgInRleHQiOiAi6YKjIDEg5YiwIDEwMDAg5ZGiIn1dLCAiZmlsZXMiOiBbXSwgImF0dGFjaG1lbnRzIjogW10sICJwYXJlbnRfbWVzc2FnZV91dWlkIjogbnVsbH0sIHsidXVpZCI6ICJ1Nzk0MzAiLCAic2VuZGVyIjogImFzc2lzdGFudCIsICJjcmVhdGVkX2F0IjogIjIwMjYtMDYtMThUMTQ6MDE6MTgrMDA6MDAiLCAidXBkYXRlZF9hdCI6ICIyMDI2LTA2LTE4VDE0OjAxOjE4KzAwOjAwIiwgInRleHQiOiAiIiwgImNvbnRlbnQiOiBbeyJ0eXBlIjogInRvb2xfdXNlIiwgIm5hbWUiOiAicmVwbCIsICJpbnB1dCI6IHsiY29kZSI6ICJwcmludChzdW0ocmFuZ2UoMSwgMTAwMSkpKSJ9fSwgeyJ0eXBlIjogInRvb2xfcmVzdWx0IiwgImNvbnRlbnQiOiAiNTAwNTAwIn0sIHsidHlwZSI6ICJ0ZXh0IiwgInRleHQiOiAi5pivICoqNTAwNTAwKirjgIIifV0sICJmaWxlcyI6IFtdLCAiYXR0YWNobWVudHMiOiBbXSwgInBhcmVudF9tZXNzYWdlX3V1aWQiOiBudWxsfSwgeyJ1dWlkIjogInU1MTc2MjYiLCAic2VuZGVyIjogImh1bWFuIiwgImNyZWF0ZWRfYXQiOiAiMjAyNi0wNi0xOFQxNDowMjowMCswMDowMCIsICJ1cGRhdGVkX2F0IjogIjIwMjYtMDYtMThUMTQ6MDI6MDArMDA6MDAiLCAidGV4dCI6ICLliJflh7rliY0gMTAg5Liq5paQ5rOi6YKj5aWR5pWwIiwgImNvbnRlbnQiOiBbeyJ0eXBlIjogInRleHQiLCAidGV4dCI6ICLliJflh7rliY0gMTAg5Liq5paQ5rOi6YKj5aWR5pWwIn1dLCAiZmlsZXMiOiBbXSwgImF0dGFjaG1lbnRzIjogW10sICJwYXJlbnRfbWVzc2FnZV91dWlkIjogbnVsbH0sIHsidXVpZCI6ICJ1NTY2NjY0IiwgInNlbmRlciI6ICJhc3Npc3RhbnQiLCAiY3JlYXRlZF9hdCI6ICIyMDI2LTA2LTE4VDE0OjAyOjIwKzAwOjAwIiwgInVwZGF0ZWRfYXQiOiAiMjAyNi0wNi0xOFQxNDowMjoyMCswMDowMCIsICJ0ZXh0IjogIiIsICJjb250ZW50IjogW3sidHlwZSI6ICJ0b29sX3VzZSIsICJuYW1lIjogInJlcGwiLCAiaW5wdXQiOiB7ImNvZGUiOiAiYSxiPTAsMTtvdXQ9W11cbmZvciBfIGluIHJhbmdlKDEwKTpcbiBvdXQuYXBwZW5kKGEpO2EsYj1iLGErYlxucHJpbnQob3V0KSJ9fSwgeyJ0eXBlIjogInRvb2xfcmVzdWx0IiwgImNvbnRlbnQiOiAiWzAsIDEsIDEsIDIsIDMsIDUsIDgsIDEzLCAyMSwgMzRdIn0sIHsidHlwZSI6ICJ0ZXh0IiwgInRleHQiOiAi5YmNIDEwIOS4qu+8mmAwLCAxLCAxLCAyLCAzLCA1LCA4LCAxMywgMjEsIDM0YOOAgiJ9XSwgImZpbGVzIjogW10sICJhdHRhY2htZW50cyI6IFtdLCAicGFyZW50X21lc3NhZ2VfdXVpZCI6IG51bGx9XX0sIHsidXVpZCI6ICJjb252LWMiLCAibmFtZSI6ICLmna3lt57kuKTlpKnooYznqIsiLCAic3VtbWFyeSI6ICIiLCAiY3JlYXRlZF9hdCI6ICIyMDI2LTA2LTE1VDIwOjAwOjAwKzAwOjAwIiwgInVwZGF0ZWRfYXQiOiAiMjAyNi0wNi0xNVQyMDowMjoxNiswMDowMCIsICJhY2NvdW50IjogeyJ1dWlkIjogImRlbW8tdXNlciJ9LCAiY2hhdF9tZXNzYWdlcyI6IFt7InV1aWQiOiAidTI2MDU1MyIsICJzZW5kZXIiOiAiaHVtYW4iLCAiY3JlYXRlZF9hdCI6ICIyMDI2LTA2LTE1VDIwOjAwOjAwKzAwOjAwIiwgInVwZGF0ZWRfYXQiOiAiMjAyNi0wNi0xNVQyMDowMDowMCswMDowMCIsICJ0ZXh0IjogIui/meaYr+aIkeaVtOeQhueahOadreW3nuaZr+eCue+8jOW4ruaIkeaOkuS4qui9u+advueCueeahOS4pOWkqeihjOeoiyIsICJjb250ZW50IjogW3sidHlwZSI6ICJ0ZXh0IiwgInRleHQiOiAi6L+Z5piv5oiR5pW055CG55qE5p2t5bee5pmv54K577yM5biu5oiR5o6S5Liq6L275p2+54K555qE5Lik5aSp6KGM56iLIn1dLCAiZmlsZXMiOiBbeyJmaWxlX25hbWUiOiAi6KGM56iL6I2J56i/LnBkZiIsICJmaWxlX3V1aWQiOiAiZGVtby1maWxlLTEifV0sICJhdHRhY2htZW50cyI6IFt7ImZpbGVfbmFtZSI6ICLmma/ngrnmuIXljZUudHh0IiwgImZpbGVfdHlwZSI6ICJ0eHQiLCAiZmlsZV9zaXplIjogIjk2IiwgImV4dHJhY3RlZF9jb250ZW50IjogIuilv+a5llxu54G16ZqQ5a+6XG7msrPlnYrooZdcbuilv+a6qua5v+WcsFxu5Y2X5a6L5b6h6KGXIn1dLCAicGFyZW50X21lc3NhZ2VfdXVpZCI6IG51bGx9LCB7InV1aWQiOiAidTgyODgxNSIsICJzZW5kZXIiOiAiYXNzaXN0YW50IiwgImNyZWF0ZWRfYXQiOiAiMjAyNi0wNi0xNVQyMDowMDoyNSswMDowMCIsICJ1cGRhdGVkX2F0IjogIjIwMjYtMDYtMTVUMjA6MDA6MjUrMDA6MDAiLCAidGV4dCI6ICIiLCAiY29udGVudCI6IFt7InR5cGUiOiAidGV4dCIsICJ0ZXh0IjogIue7meS9oOaOkuS6huS4quS4jei1tui3r+eahOS4pOWkqeeJiO+8mlxuXG4qKkRheSAx77yI6KW/5rmW54mH5Yy677yJKipcbi0g5LiK5Y2I77ya6KW/5rmW77yI5pat5qGl4oaS55m95aCk77yJXG4tIOS4i+WNiO+8mueBtemakOWvuiArIOmjnuadpeWzsFxuLSDlgo3mmZrvvJrmsrPlnYrooZflsI/lkINcblxuKipEYXkgMu+8iOiHqueEtuaFouiKguWlj++8iSoqXG4tIOS4iuWNiO+8muilv+a6qua5v+WcsOWdkOiIuVxuLSDkuIvljYjvvJrljZflrovlvqHooZfllp3ojLbmlLblsL4ifV0sICJmaWxlcyI6IFtdLCAiYXR0YWNobWVudHMiOiBbXSwgInBhcmVudF9tZXNzYWdlX3V1aWQiOiBudWxsfSwgeyJ1dWlkIjogInUxMzUyNiIsICJzZW5kZXIiOiAiaHVtYW4iLCAiY3JlYXRlZF9hdCI6ICIyMDI2LTA2LTE1VDIwOjAxOjAwKzAwOjAwIiwgInVwZGF0ZWRfYXQiOiAiMjAyNi0wNi0xNVQyMDowMTowMCswMDowMCIsICJ0ZXh0IjogIuesrOS4gOWkqeaDs+WGjei9u+advuS6m++8jOeBtemakOWvuuWOu+aOiSIsICJjb250ZW50IjogW3sidHlwZSI6ICJ0ZXh0IiwgInRleHQiOiAi56ys5LiA5aSp5oOz5YaN6L275p2+5Lqb77yM54G16ZqQ5a+65Y675o6JIn1dLCAiZmlsZXMiOiBbXSwgImF0dGFjaG1lbnRzIjogW10sICJwYXJlbnRfbWVzc2FnZV91dWlkIjogbnVsbH0sIHsidXVpZCI6ICJ1NDM4MjY0IiwgInNlbmRlciI6ICJhc3Npc3RhbnQiLCAiY3JlYXRlZF9hdCI6ICIyMDI2LTA2LTE1VDIwOjAxOjIwKzAwOjAwIiwgInVwZGF0ZWRfYXQiOiAiMjAyNi0wNi0xNVQyMDowMToyMCswMDowMCIsICJ0ZXh0IjogIiIsICJjb250ZW50IjogW3sidHlwZSI6ICJ0ZXh0IiwgInRleHQiOiAi5aW977yM56ys5LiA5aSp57K+566A5Li677ya6KW/5rmW5ryr5q2lIOKGkiDmuZbovrnlkpbllaHppobmrYfohJog4oaSIOays+Wdiuihl+aZmumlreOAgiJ9XSwgImZpbGVzIjogW10sICJhdHRhY2htZW50cyI6IFtdLCAicGFyZW50X21lc3NhZ2VfdXVpZCI6IG51bGx9LCB7InV1aWQiOiAidTIwMjQ5MCIsICJzZW5kZXIiOiAiaHVtYW4iLCAiY3JlYXRlZF9hdCI6ICIyMDI2LTA2LTE1VDIwOjAyOjAwKzAwOjAwIiwgInVwZGF0ZWRfYXQiOiAiMjAyNi0wNi0xNVQyMDowMjowMCswMDowMCIsICJ0ZXh0IjogIua5lui+ueWSluWVoemmhuacieaOqOiNkOWQlyIsICJjb250ZW50IjogW3sidHlwZSI6ICJ0ZXh0IiwgInRleHQiOiAi5rmW6L655ZKW5ZWh6aaG5pyJ5o6o6I2Q5ZCXIn1dLCAiZmlsZXMiOiBbXSwgImF0dGFjaG1lbnRzIjogW10sICJwYXJlbnRfbWVzc2FnZV91dWlkIjogbnVsbH0sIHsidXVpZCI6ICJ1NzI1ODE5IiwgInNlbmRlciI6ICJhc3Npc3RhbnQiLCAiY3JlYXRlZF9hdCI6ICIyMDI2LTA2LTE1VDIwOjAyOjE2KzAwOjAwIiwgInVwZGF0ZWRfYXQiOiAiMjAyNi0wNi0xNVQyMDowMjoxNiswMDowMCIsICJ0ZXh0IjogIiIsICJjb250ZW50IjogW3sidHlwZSI6ICJ0ZXh0IiwgInRleHQiOiAi5YyX5bGx6KGX5LiA5bim55qE54us56uL5ZKW5ZWh6aaG77yM6Zyy5Y+w6IO955yL5rmW77yM6YCC5ZCI5Y+R5ZGG44CCIn1dLCAiZmlsZXMiOiBbXSwgImF0dGFjaG1lbnRzIjogW10sICJwYXJlbnRfbWVzc2FnZV91dWlkIjogbnVsbH1dfSwgeyJ1dWlkIjogImNvbnYtZCIsICJuYW1lIjogIuS4reivkeiLsea2puiJsiIsICJzdW1tYXJ5IjogIiIsICJjcmVhdGVkX2F0IjogIjIwMjYtMDYtMTJUMTA6MDA6MDArMDA6MDAiLCAidXBkYXRlZF9hdCI6ICIyMDI2LTA2LTEyVDEwOjAxOjEwKzAwOjAwIiwgImFjY291bnQiOiB7InV1aWQiOiAiZGVtby11c2VyIn0sICJjaGF0X21lc3NhZ2VzIjogW3sidXVpZCI6ICJ1NjM2MzkzIiwgInNlbmRlciI6ICJodW1hbiIsICJjcmVhdGVkX2F0IjogIjIwMjYtMDYtMTJUMTA6MDA6MDArMDA6MDAiLCAidXBkYXRlZF9hdCI6ICIyMDI2LTA2LTEyVDEwOjAwOjAwKzAwOjAwIiwgInRleHQiOiAi5oqK6L+Z5Y+l57+76K+R5oiQ5Zyw6YGT6Iux5paH77ya6L+Z5Liq5bel5YW36K6p5oiR55yB5LqG5b6I5aSa5pe26Ze0IiwgImNvbnRlbnQiOiBbeyJ0eXBlIjogInRleHQiLCAidGV4dCI6ICLmiorov5nlj6Xnv7vor5HmiJDlnLDpgZPoi7HmlofvvJrov5nkuKrlt6XlhbforqnmiJHnnIHkuoblvojlpJrml7bpl7QifV0sICJmaWxlcyI6IFtdLCAiYXR0YWNobWVudHMiOiBbXSwgInBhcmVudF9tZXNzYWdlX3V1aWQiOiBudWxsfSwgeyJ1dWlkIjogInU1MzA0NzUiLCAic2VuZGVyIjogImFzc2lzdGFudCIsICJjcmVhdGVkX2F0IjogIjIwMjYtMDYtMTJUMTA6MDA6MTIrMDA6MDAiLCAidXBkYXRlZF9hdCI6ICIyMDI2LTA2LTEyVDEwOjAwOjEyKzAwOjAwIiwgInRleHQiOiAiIiwgImNvbnRlbnQiOiBbeyJ0eXBlIjogInRleHQiLCAidGV4dCI6ICLlh6Dnp43or7Tms5XvvJpcbi0gVGhpcyB0b29sIHNhdmVzIG1lIGEgdG9uIG9mIHRpbWUuXG4tIFRoaXMgdG9vbCBpcyBhIHJlYWwgdGltZS1zYXZlci5cblxu5Y+j6K+t6YeM56ys5LqM56eN5pu06Ieq54S244CCIn1dLCAiZmlsZXMiOiBbXSwgImF0dGFjaG1lbnRzIjogW10sICJwYXJlbnRfbWVzc2FnZV91dWlkIjogbnVsbH0sIHsidXVpZCI6ICJ1NDAwMDQzIiwgInNlbmRlciI6ICJodW1hbiIsICJjcmVhdGVkX2F0IjogIjIwMjYtMDYtMTJUMTA6MDE6MDArMDA6MDAiLCAidXBkYXRlZF9hdCI6ICIyMDI2LTA2LTEyVDEwOjAxOjAwKzAwOjAwIiwgInRleHQiOiAi5pu05q2j5byP5LiA54K55ZGiIiwgImNvbnRlbnQiOiBbeyJ0eXBlIjogInRleHQiLCAidGV4dCI6ICLmm7TmraPlvI/kuIDngrnlkaIifV0sICJmaWxlcyI6IFtdLCAiYXR0YWNobWVudHMiOiBbXSwgInBhcmVudF9tZXNzYWdlX3V1aWQiOiBudWxsfSwgeyJ1dWlkIjogInUyNjU3NTciLCAic2VuZGVyIjogImFzc2lzdGFudCIsICJjcmVhdGVkX2F0IjogIjIwMjYtMDYtMTJUMTA6MDE6MTArMDA6MDAiLCAidXBkYXRlZF9hdCI6ICIyMDI2LTA2LTEyVDEwOjAxOjEwKzAwOjAwIiwgInRleHQiOiAiIiwgImNvbnRlbnQiOiBbeyJ0eXBlIjogInRleHQiLCAidGV4dCI6ICIqVGhpcyB0b29sIGhhcyBzaWduaWZpY2FudGx5IGltcHJvdmVkIG15IGVmZmljaWVuY3kuKiJ9XSwgImZpbGVzIjogW10sICJhdHRhY2htZW50cyI6IFtdLCAicGFyZW50X21lc3NhZ2VfdXVpZCI6IG51bGx9XX0sIHsidXVpZCI6ICJjb252LWUiLCAibmFtZSI6ICLoh6rmiJHku4vnu43mtqboibIiLCAic3VtbWFyeSI6ICIiLCAiY3JlYXRlZF9hdCI6ICIyMDI2LTA2LTEwVDIxOjAwOjAwKzAwOjAwIiwgInVwZGF0ZWRfYXQiOiAiMjAyNi0wNi0xMFQyMTowMDoxNCswMDowMCIsICJhY2NvdW50IjogeyJ1dWlkIjogImRlbW8tdXNlciJ9LCAiY2hhdF9tZXNzYWdlcyI6IFt7InV1aWQiOiAidTk1MDUyNSIsICJzZW5kZXIiOiAiaHVtYW4iLCAiY3JlYXRlZF9hdCI6ICIyMDI2LTA2LTEwVDIxOjAwOjAwKzAwOjAwIiwgInVwZGF0ZWRfYXQiOiAiMjAyNi0wNi0xMFQyMTowMDowMCswMDowMCIsICJ0ZXh0IjogIuW4ruaIkeaKiui/meauteiHquaIkeS7i+e7jea2puiJsuW+l+abtOeugOa0ge+8muaIkeaYr+S4gOWQjeWBmuS6huS6lOW5tOeahOS6p+WTgeiuvuiuoeW4iO+8jOW5s+aXtuWWnOasoueglOeptuWQhOenjeaViOeOh+W3peWFtyIsICJjb250ZW50IjogW3sidHlwZSI6ICJ0ZXh0IiwgInRleHQiOiAi5biu5oiR5oqK6L+Z5q616Ieq5oiR5LuL57uN5ram6Imy5b6X5pu0566A5rSB77ya5oiR5piv5LiA5ZCN5YGa5LqG5LqU5bm055qE5Lqn5ZOB6K6+6K6h5biI77yM5bmz5pe25Zac5qyi56CU56m25ZCE56eN5pWI546H5bel5YW3In1dLCAiZmlsZXMiOiBbXSwgImF0dGFjaG1lbnRzIjogW10sICJwYXJlbnRfbWVzc2FnZV91dWlkIjogbnVsbH0sIHsidXVpZCI6ICJ1MjIxNDQ1IiwgInNlbmRlciI6ICJhc3Npc3RhbnQiLCAiY3JlYXRlZF9hdCI6ICIyMDI2LTA2LTEwVDIxOjAwOjE0KzAwOjAwIiwgInVwZGF0ZWRfYXQiOiAiMjAyNi0wNi0xMFQyMTowMDoxNCswMDowMCIsICJ0ZXh0IjogIiIsICJjb250ZW50IjogW3sidHlwZSI6ICJ0ZXh0IiwgInRleHQiOiAi44CM5Lqn5ZOB6K6+6K6h5biI77yM5LqU5bm057uP6aqM77yM54Ot6KG35oqY6IW+5pWI546H5bel5YW344CC44CNXG5cbuabtOWujOaVtOeJiO+8muOAjOaIkeaYr+S4gOWQjeacieS6lOW5tOe7j+mqjOeahOS6p+WTgeiuvuiuoeW4iO+8jOW5s+aXtuWWnOasoueglOeptuaViOeOh+W3peWFt+OAgeaJk+ejqOW3peS9nOa1geOAguOAjSJ9XSwgImZpbGVzIjogW10sICJhdHRhY2htZW50cyI6IFtdLCAicGFyZW50X21lc3NhZ2VfdXVpZCI6IG51bGx9XX0sIHsidXVpZCI6ICJjb252LWYiLCAibmFtZSI6ICJQeXRob24g57yp6L+b5oql6ZSZIiwgInN1bW1hcnkiOiAiIiwgImNyZWF0ZWRfYXQiOiAiMjAyNi0wNi0wOFQxNjowMDowMCswMDowMCIsICJ1cGRhdGVkX2F0IjogIjIwMjYtMDYtMDhUMTY6MDE6MTIrMDA6MDAiLCAiYWNjb3VudCI6IHsidXVpZCI6ICJkZW1vLXVzZXIifSwgImNoYXRfbWVzc2FnZXMiOiBbeyJ1dWlkIjogInUyMzEzNSIsICJzZW5kZXIiOiAiaHVtYW4iLCAiY3JlYXRlZF9hdCI6ICIyMDI2LTA2LTA4VDE2OjAwOjAwKzAwOjAwIiwgInVwZGF0ZWRfYXQiOiAiMjAyNi0wNi0wOFQxNjowMDowMCswMDowMCIsICJ0ZXh0IjogIlB5dGhvbiDmiqXplJkgSW5kZW50YXRpb25FcnJvciDmmK/ku4DkuYjmhI/mgJ0iLCAiY29udGVudCI6IFt7InR5cGUiOiAidGV4dCIsICJ0ZXh0IjogIlB5dGhvbiDmiqXplJkgSW5kZW50YXRpb25FcnJvciDmmK/ku4DkuYjmhI/mgJ0ifV0sICJmaWxlcyI6IFtdLCAiYXR0YWNobWVudHMiOiBbXSwgInBhcmVudF9tZXNzYWdlX3V1aWQiOiBudWxsfSwgeyJ1dWlkIjogInU4MjAzNjciLCAic2VuZGVyIjogImFzc2lzdGFudCIsICJjcmVhdGVkX2F0IjogIjIwMjYtMDYtMDhUMTY6MDA6MTYrMDA6MDAiLCAidXBkYXRlZF9hdCI6ICIyMDI2LTA2LTA4VDE2OjAwOjE2KzAwOjAwIiwgInRleHQiOiAiIiwgImNvbnRlbnQiOiBbeyJ0eXBlIjogInRleHQiLCAidGV4dCI6ICLnvKnov5vplJnor6/jgIJQeXRob24g55So57yp6L+b5YiS5YiG5Luj56CB5Z2X77yM5bi46KeB5Y6f5Zug77yaXG5cbmBgYHB5dGhvblxuZGVmIGYoKTpcbnByaW50KCdoaScpICAgIyDinYwg5bCR5LqG57yp6L+bXG5gYGBcblxu5pS55oiQ77yaXG5cbmBgYHB5dGhvblxuZGVmIGYoKTpcbiAgICBwcmludCgnaGknKSAgIyDinIUg57yp6L+bIDQg56m65qC8XG5gYGBcblxu5Yir5re355SoIFRhYiDlkoznqbrmoLzjgIIifV0sICJmaWxlcyI6IFtdLCAiYXR0YWNobWVudHMiOiBbXSwgInBhcmVudF9tZXNzYWdlX3V1aWQiOiBudWxsfSwgeyJ1dWlkIjogInUxNjAyOTciLCAic2VuZGVyIjogImh1bWFuIiwgImNyZWF0ZWRfYXQiOiAiMjAyNi0wNi0wOFQxNjowMTowMCswMDowMCIsICJ1cGRhdGVkX2F0IjogIjIwMjYtMDYtMDhUMTY6MDE6MDArMDA6MDAiLCAidGV4dCI6ICJWU0NvZGUg5oCO5LmI57uf5LiA5oiQ56m65qC8IiwgImNvbnRlbnQiOiBbeyJ0eXBlIjogInRleHQiLCAidGV4dCI6ICJWU0NvZGUg5oCO5LmI57uf5LiA5oiQ56m65qC8In1dLCAiZmlsZXMiOiBbXSwgImF0dGFjaG1lbnRzIjogW10sICJwYXJlbnRfbWVzc2FnZV91dWlkIjogbnVsbH0sIHsidXVpZCI6ICJ1NzAwOTA1IiwgInNlbmRlciI6ICJhc3Npc3RhbnQiLCAiY3JlYXRlZF9hdCI6ICIyMDI2LTA2LTA4VDE2OjAxOjEyKzAwOjAwIiwgInVwZGF0ZWRfYXQiOiAiMjAyNi0wNi0wOFQxNjowMToxMiswMDowMCIsICJ0ZXh0IjogIiIsICJjb250ZW50IjogW3sidHlwZSI6ICJ0ZXh0IiwgInRleHQiOiAi5bqV6YOo54q25oCB5qCP54K544CMU3BhY2VzIC8gVGFi44CN4oaSIOmAiSAqQ29udmVydCBJbmRlbnRhdGlvbiB0byBTcGFjZXMq77yM5bm25oqKIFRhYiBTaXplIOiuvuS4uiA044CCIn1dLCAiZmlsZXMiOiBbXSwgImF0dGFjaG1lbnRzIjogW10sICJwYXJlbnRfbWVzc2FnZV91dWlkIjogbnVsbH1dfSwgeyJ1dWlkIjogImNvbnYtZyIsICJuYW1lIjogIuS4ieWIhuWMluWBpei6q+iuoeWIkiIsICJzdW1tYXJ5IjogIiIsICJjcmVhdGVkX2F0IjogIjIwMjYtMDYtMDVUMDc6MzA6MDArMDA6MDAiLCAidXBkYXRlZF9hdCI6ICIyMDI2LTA2LTA1VDA3OjMwOjIwKzAwOjAwIiwgImFjY291bnQiOiB7InV1aWQiOiAiZGVtby11c2VyIn0sICJjaGF0X21lc3NhZ2VzIjogW3sidXVpZCI6ICJ1Mjg1MzE5IiwgInNlbmRlciI6ICJodW1hbiIsICJjcmVhdGVkX2F0IjogIjIwMjYtMDYtMDVUMDc6MzA6MDArMDA6MDAiLCAidXBkYXRlZF9hdCI6ICIyMDI2LTA2LTA1VDA3OjMwOjAwKzAwOjAwIiwgInRleHQiOiAi5biu5oiR5Yi25a6a5LiA5Liq5paw5omL5LiJ5YiG5YyW5YGl6Lqr6K6h5YiSIiwgImNvbnRlbnQiOiBbeyJ0eXBlIjogInRleHQiLCAidGV4dCI6ICLluK7miJHliLblrprkuIDkuKrmlrDmiYvkuInliIbljJblgaXouqvorqHliJIifV0sICJmaWxlcyI6IFtdLCAiYXR0YWNobWVudHMiOiBbXSwgInBhcmVudF9tZXNzYWdlX3V1aWQiOiBudWxsfSwgeyJ1dWlkIjogInUyNTI0NzYiLCAic2VuZGVyIjogImFzc2lzdGFudCIsICJjcmVhdGVkX2F0IjogIjIwMjYtMDYtMDVUMDc6MzA6MjArMDA6MDAiLCAidXBkYXRlZF9hdCI6ICIyMDI2LTA2LTA1VDA3OjMwOjIwKzAwOjAwIiwgInRleHQiOiAiIiwgImNvbnRlbnQiOiBbeyJ0eXBlIjogInRleHQiLCAidGV4dCI6ICIqKuS4ieWIhuWMlu+8iOe7g+S4gOS8keS4gOWPi+WlveeJiO+8iSoqXG4tIERheSBBIOiDuCvkuInlpLTvvJrljafmjqjjgIHkuIrmlpzlk5Hpk4PjgIHnu7PntKLkuIvljotcbi0gRGF5IEIg6IOMK+S6jOWktO+8muW8leS9ky/pq5jkvY3kuIvmi4njgIHliJLoiLnjgIHlvK/kuL5cbi0gRGF5IEMg6IW/K+iCqe+8mua3sei5suOAgeiFv+S4vuOAgeaOqOS4vuOAgeS+p+W5s+S4vlxuXG7mr4/kuKrliqjkvZwgMyDnu4Qgw5cgOOKAkzEyIOasoe+8jOaWsOaJi+WFiOaKiuWKqOS9nOWBmuagh+WHhuOAgiJ9XSwgImZpbGVzIjogW10sICJhdHRhY2htZW50cyI6IFtdLCAicGFyZW50X21lc3NhZ2VfdXVpZCI6IG51bGx9XX0sIHsidXVpZCI6ICJjb252LWgiLCAibmFtZSI6ICLpuKHog7jogonoj5zosLEiLCAic3VtbWFyeSI6ICIiLCAiY3JlYXRlZF9hdCI6ICIyMDI2LTA2LTAyVDE4OjMwOjAwKzAwOjAwIiwgInVwZGF0ZWRfYXQiOiAiMjAyNi0wNi0wMlQxODozMDoxOCswMDowMCIsICJhY2NvdW50IjogeyJ1dWlkIjogImRlbW8tdXNlciJ9LCAiY2hhdF9tZXNzYWdlcyI6IFt7InV1aWQiOiAidTIyNTc2MSIsICJzZW5kZXIiOiAiaHVtYW4iLCAiY3JlYXRlZF9hdCI6ICIyMDI2LTA2LTAyVDE4OjMwOjAwKzAwOjAwIiwgInVwZGF0ZWRfYXQiOiAiMjAyNi0wNi0wMlQxODozMDowMCswMDowMCIsICJ0ZXh0IjogIueUqOm4oeiDuOiCieWBmuWHoOmBk+eugOWNleeahOiPnCIsICJjb250ZW50IjogW3sidHlwZSI6ICJ0ZXh0IiwgInRleHQiOiAi55So6bih6IO46IKJ5YGa5Yeg6YGT566A5Y2V55qE6I+cIn1dLCAiZmlsZXMiOiBbXSwgImF0dGFjaG1lbnRzIjogW10sICJwYXJlbnRfbWVzc2FnZV91dWlkIjogbnVsbH0sIHsidXVpZCI6ICJ1MTg4MDIxIiwgInNlbmRlciI6ICJhc3Npc3RhbnQiLCAiY3JlYXRlZF9hdCI6ICIyMDI2LTA2LTAyVDE4OjMwOjE4KzAwOjAwIiwgInVwZGF0ZWRfYXQiOiAiMjAyNi0wNi0wMlQxODozMDoxOCswMDowMCIsICJ0ZXh0IjogIiIsICJjb250ZW50IjogW3sidHlwZSI6ICJ0ZXh0IiwgInRleHQiOiAi5LiJ6YGT5aW95LiK5omL55qE77yaXG4xLiAqKum7keakkum4oeiDuCoq77ya5YiH54mH6IWMIDEwIOWIhumSn++8jOeFjuWIsOW+rueEpu+8jOaSkum7keakkuOAglxuMi4gKirpuKHog7jmspnmi4kqKu+8mueFrueGn+aSleS4nSArIOeUn+iPnOeOieexsyArIOayuemGi+axgeOAglxuMy4gKirnhafng6fpuKHog7gqKu+8mueFjuWQjua3i+eFp+eDp+axgeaUtuaxgeOAgiJ9XSwgImZpbGVzIjogW10sICJhdHRhY2htZW50cyI6IFtdLCAicGFyZW50X21lc3NhZ2VfdXVpZCI6IG51bGx9XX0sIHsidXVpZCI6ICJjb252LWkiLCAibmFtZSI6ICLjgIrljp/liJnjgIvor7vkuabnrJTorrAiLCAic3VtbWFyeSI6ICIiLCAiY3JlYXRlZF9hdCI6ICIyMDI2LTA1LTI4VDIyOjAwOjAwKzAwOjAwIiwgInVwZGF0ZWRfYXQiOiAiMjAyNi0wNS0yOFQyMjowMDoyMCswMDowMCIsICJhY2NvdW50IjogeyJ1dWlkIjogImRlbW8tdXNlciJ9LCAiY2hhdF9tZXNzYWdlcyI6IFt7InV1aWQiOiAidTQ1MTY1IiwgInNlbmRlciI6ICJodW1hbiIsICJjcmVhdGVkX2F0IjogIjIwMjYtMDUtMjhUMjI6MDA6MDArMDA6MDAiLCAidXBkYXRlZF9hdCI6ICIyMDI2LTA1LTI4VDIyOjAwOjAwKzAwOjAwIiwgInRleHQiOiAi5biu5oiR5oqK44CK5Y6f5YiZ44CL6L+Z5pys5Lmm55qE5qC45b+D6KeC54K55oC757uT5oiQ5LiJ5p2hIiwgImNvbnRlbnQiOiBbeyJ0eXBlIjogInRleHQiLCAidGV4dCI6ICLluK7miJHmiorjgIrljp/liJnjgIvov5nmnKzkuabnmoTmoLjlv4Pop4LngrnmgLvnu5PmiJDkuInmnaEifV0sICJmaWxlcyI6IFtdLCAiYXR0YWNobWVudHMiOiBbXSwgInBhcmVudF9tZXNzYWdlX3V1aWQiOiBudWxsfSwgeyJ1dWlkIjogInUzODU4MTEiLCAic2VuZGVyIjogImFzc2lzdGFudCIsICJjcmVhdGVkX2F0IjogIjIwMjYtMDUtMjhUMjI6MDA6MjArMDA6MDAiLCAidXBkYXRlZF9hdCI6ICIyMDI2LTA1LTI4VDIyOjAwOjIwKzAwOjAwIiwgInRleHQiOiAiIiwgImNvbnRlbnQiOiBbeyJ0eXBlIjogInRleHQiLCAidGV4dCI6ICIxLiAqKuaLpeaKseeOsOWunuOAgeebtOmdoumXrumimCoq77ya55eb6IumICsg5Y+N5oCdID0g6L+b5q2l44CCXG4yLiAqKuaegeW6puaxguecn+OAgeaegeW6pumAj+aYjioq77ya5oqK5YiG5q2n5pGG5Yiw5Y+w6Z2i5LiK6Kej5Yaz44CCXG4zLiAqKueUqOWOn+WImeWMluWGs+etlioq77ya5oqK5Y+N5aSN5Ye6546w55qE5oOF5Ya15rKJ5reA5oiQ5Y+v5aSN55So55qE5Y6f5YiZ44CCIn1dLCAiZmlsZXMiOiBbXSwgImF0dGFjaG1lbnRzIjogW10sICJwYXJlbnRfbWVzc2FnZV91dWlkIjogbnVsbH1dfSwgeyJ1dWlkIjogImNvbnYtaiIsICJuYW1lIjogIuato+aAgeWIhuW4g+WFrOW8jyIsICJzdW1tYXJ5IjogIiIsICJjcmVhdGVkX2F0IjogIjIwMjYtMDUtMjVUMTE6MDA6MDArMDA6MDAiLCAidXBkYXRlZF9hdCI6ICIyMDI2LTA1LTI1VDExOjAwOjE2KzAwOjAwIiwgImFjY291bnQiOiB7InV1aWQiOiAiZGVtby11c2VyIn0sICJjaGF0X21lc3NhZ2VzIjogW3sidXVpZCI6ICJ1OTY2ODcwIiwgInNlbmRlciI6ICJodW1hbiIsICJjcmVhdGVkX2F0IjogIjIwMjYtMDUtMjVUMTE6MDA6MDArMDA6MDAiLCAidXBkYXRlZF9hdCI6ICIyMDI2LTA1LTI1VDExOjAwOjAwKzAwOjAwIiwgInRleHQiOiAi5q2j5oCB5YiG5biD55qE5qaC546H5a+G5bqm5Ye95pWw6ZW/5LuA5LmI5qC3IiwgImNvbnRlbnQiOiBbeyJ0eXBlIjogInRleHQiLCAidGV4dCI6ICLmraPmgIHliIbluIPnmoTmpoLnjoflr4bluqblh73mlbDplb/ku4DkuYjmoLcifV0sICJmaWxlcyI6IFtdLCAiYXR0YWNobWVudHMiOiBbXSwgInBhcmVudF9tZXNzYWdlX3V1aWQiOiBudWxsfSwgeyJ1dWlkIjogInUyMTA4MzMiLCAic2VuZGVyIjogImFzc2lzdGFudCIsICJjcmVhdGVkX2F0IjogIjIwMjYtMDUtMjVUMTE6MDA6MTYrMDA6MDAiLCAidXBkYXRlZF9hdCI6ICIyMDI2LTA1LTI1VDExOjAwOjE2KzAwOjAwIiwgInRleHQiOiAiIiwgImNvbnRlbnQiOiBbeyJ0eXBlIjogInRoaW5raW5nIiwgInRoaW5raW5nIjogIue7meWHuuagh+WHhiBQREYg5YWs5byP5bm26K+05piO5Y+C5pWw44CCIn0sIHsidHlwZSI6ICJ0ZXh0IiwgInRleHQiOiAi5q2j5oCB5YiG5biDICROKFxcbXUsXFxzaWdtYV4yKSQg55qE5qaC546H5a+G5bqm5Ye95pWw77yaXG5cbiQkZih4KT1cXGZyYWN7MX17XFxzaWdtYVxcc3FydHsyXFxwaX19XFwsZV57LVxcZnJhY3soeC1cXG11KV4yfXsyXFxzaWdtYV4yfX0kJFxuXG7lhbbkuK0gJFxcbXUkIOaYr+Wdh+WAvOOAgSRcXHNpZ21hJCDmmK/moIflh4blt67jgIIifV0sICJmaWxlcyI6IFtdLCAiYXR0YWNobWVudHMiOiBbXSwgInBhcmVudF9tZXNzYWdlX3V1aWQiOiBudWxsfV19XX0="),function(c){return c.charCodeAt(0)})));
+const APP_VERSION='v6.0';
+const DEMO_DATA=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob("eyJhY2NvdW50Ijp7InV1aWQiOiJkZW1vLXVzZXIiLCJmdWxsX25hbWUiOiLlsI/mn6/vvIjnpLrkvovvvIkiLCJlbWFpbF9hZGRyZXNzIjoiZGVtb0BjbGF1ZGV2aWV3ZXIuYXBwIiwidmVyaWZpZWRfcGhvbmVfbnVtYmVyIjpudWxsfSwibWVtb3JpZXMiOnsiY29udmVyc2F0aW9uc19tZW1vcnkiOiIqKuWFs+S6juS9oCoqXG5cbuWwj+afr+aYr+S4gOWQjeS6p+WTgeiuvuiuoeW4iO+8jOWWnOasoueugOa0geWlveeUqOeahOW3peWFt++8jOaXpeW4uOeUqCBDbGF1ZGUg5aSE55CG5YaZ5L2c44CB57+76K+R44CB5Luj56CB54mH5q615ZKM6LWE5paZ5pW055CG44CCXG5cbioq5YGP5aW9Kipcblxu5Zac5qyi5p6B566A6K6+6K6h5LiO5byA5rqQ5bel5YW377yM5Lmg5oOv5oqK6YeN6KaB5a+56K+d5pys5Zyw5a2Y5qGj77yb5L2/55SoIE1hY++8jOWBj+Wlvea3seiJsuaooeW8j+OAglxuXG4qKuacgOi/keWcqOWBmioqXG5cbuWcqOaVtOeQhuS4jiBBSSDnmoTljoblj7Llr7nor53vvIzlr7vmib7og73mnKzlnLDmiZPlvIDjgIHmkJzntKLjgIHlr7zlh7rnmoTnrqHnkIbmlrnlvI/vvIznnIvph43jgIzmlbDmja7kuI3kuIrkvKDjgIHlrozlhajmnKzlnLDjgI3jgIIiLCJwcm9qZWN0X21lbW9yaWVzIjp7InByb2otMSI6IuivpemhueebrueUqOS6juS6p+WTgeiuvuiuoeWSqOivou+8muWwj+afr+W4uOmXruS6pOS6kua1geeoi+OAgeaWh+ahiOaOqui+nuS4juernuWTgeWIhuaekO+8jOWBj+WlveebtOaOpee7mee7k+iuuuOAgiJ9LCJhY2NvdW50X3V1aWQiOiJkZW1vLXVzZXIiLCJtZW1vcnlfZmlsZXMiOlt7InBhdGgiOiIvYXJlYXMvcHJvZHVjdC1kZXNpZ24ubWQiLCJjb250ZW50IjoiLS0tXG5uYW1lOiBwcm9kdWN0LWRlc2lnblxuZGVzY3JpcHRpb246IOWwj+afr+eahOS6p+WTgeiuvuiuoeW3peS9nOS5oOaDr1xuLS0tXG4tIOWBj+WlveaegeeugOeVjOmdou+8jOiDveecgeeahOWNoeeJh+S4gOW+i+ecgeaOiVxuLSDkuqTkupLmlofmoYjorrLnqbbjgIzkuIDlj6Xor53or7TmuIXjgI3vvIzkuI3lhpnop6Pph4rmgKfplb/lj6Vcbi0g5rex6Imy5qih5byP5piv5Yia6ZyA77yM5Lu75L2V6YWN6Imy6YO96KaB5Lik5aWX5LiA6LW36aqMXG4tIOivhOWuoeWJjeS5oOaDr+WFiOWHuuS4gOeJiOS9juS/neecn+e6v+ahhu+8jOWGjeiwiOinhuiniSJ9LHsicGF0aCI6Ii9wcmVmZXJlbmNlcy90b29saW5nLm1kIiwiY29udGVudCI6Ii0tLVxubmFtZTogdG9vbGluZ1xuZGVzY3JpcHRpb246IOW4uOeUqOW3peWFt+S4juWBj+WlvVxuLS0tXG4tIOacrOWcsOS8mOWFiO+8muiDveemu+e6v+i3keeahOW3peWFt+S8mOWFiOS6juS6keerr+acjeWKoVxuLSDljZXmlofku7bjgIHlj6/lj4zlh7vmiZPlvIDnmoTlsI/lt6XlhbfmnIDlkIjlv4PmhI9cbi0g6K6o5Y6M6ZyA6KaB5rOo5YaM6LSm5Y+35omN6IO96K+V55So55qE5Lic6KW/In1dfSwicHJvamVjdHMiOlt7InV1aWQiOiJwcm9qLTEiLCJuYW1lIjoi5Lqn5ZOB6K6+6K6h5Yqp5omLIiwiZGVzY3JpcHRpb24iOiLml6XluLjorr7orqHlt6XkvZznmoQgQUkg5Yqp5omLIiwiaXNfcHJpdmF0ZSI6dHJ1ZSwiaXNfc3RhcnRlcl9wcm9qZWN0IjpmYWxzZSwicHJvbXB0X3RlbXBsYXRlIjoi5L2g5piv5LiA5L2N6LWE5rex5Lqn5ZOB6K6+6K6h6aG+6Zeu77yM5Zue562U566A5rSB44CB57uZ57uT6K6644CB5b+F6KaB5pe26YWN5LiA5Y+l55CG55Sx44CCIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDYtMDFUMDg6MDA6MDArMDA6MDAiLCJ1cGRhdGVkX2F0IjoiMjAyNi0wNi0xMFQwODowMDowMCswMDowMCIsImNyZWF0b3IiOnsidXVpZCI6ImRlbW8tdXNlciIsImZ1bGxfbmFtZSI6IuWwj+afr++8iOekuuS+i++8iSJ9LCJkb2NzIjpbeyJ1dWlkIjoiZG9jLTEiLCJmaWxlbmFtZSI6IuiuvuiuoeinhOiMgy5tZCIsImNvbnRlbnQiOiIjIOiuvuiuoeinhOiMg1xuXG4tIOS4u+iJsu+8muaaluapmSAjRDk3NzU3XG4tIOWchuinku+8mjEycHhcbi0g5Y6f5YiZ77ya55WZ55m95YWF6Laz44CB5bGC57qn5riF5pmwIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDYtMDFUMDg6MDU6MDArMDA6MDAifV19XSwiY29udnMiOlt7InV1aWQiOiJjb252LWEiLCJuYW1lIjoi5LqM5qyh5pa556iL5LiO5Yik5Yir5byPIiwic3VtbWFyeSI6IiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA2LTIwVDA5OjAwOjAwKzAwOjAwIiwidXBkYXRlZF9hdCI6IjIwMjYtMDYtMjBUMDk6MDM6MTYrMDA6MDAiLCJhY2NvdW50Ijp7InV1aWQiOiJkZW1vLXVzZXIifSwiY2hhdF9tZXNzYWdlcyI6W3sidXVpZCI6InU4NTE1NTgiLCJzZW5kZXIiOiJodW1hbiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA2LTIwVDA5OjAwOjAwKzAwOjAwIiwidXBkYXRlZF9hdCI6IjIwMjYtMDYtMjBUMDk6MDA6MDArMDA6MDAiLCJ0ZXh0Ijoi5biu5oiR55So5YWs5byP6Kej6YeK5LiA5LiL5LqM5qyh5pa556iL55qE5rGC5qC55YWs5byPIiwiY29udGVudCI6W3sidHlwZSI6InRleHQiLCJ0ZXh0Ijoi5biu5oiR55So5YWs5byP6Kej6YeK5LiA5LiL5LqM5qyh5pa556iL55qE5rGC5qC55YWs5byPIn1dLCJmaWxlcyI6W10sImF0dGFjaG1lbnRzIjpbXSwicGFyZW50X21lc3NhZ2VfdXVpZCI6bnVsbH0seyJ1dWlkIjoidTEzNjc4NiIsInNlbmRlciI6ImFzc2lzdGFudCIsImNyZWF0ZWRfYXQiOiIyMDI2LTA2LTIwVDA5OjAwOjEyKzAwOjAwIiwidXBkYXRlZF9hdCI6IjIwMjYtMDYtMjBUMDk6MDA6MTIrMDA6MDAiLCJ0ZXh0IjoiIiwiY29udGVudCI6W3sidHlwZSI6InRoaW5raW5nIiwidGhpbmtpbmciOiLnlKjmoIflh4YgTGFUZVgg5YaZ5Ye65YWs5byP5bm26Kej6YeK5Yik5Yir5byP77yM5L+d5oyB566A5rSB44CCIn0seyJ0eXBlIjoidGV4dCIsInRleHQiOiLkuozmrKHmlrnnqIsgJGF4XjIrYngrYz0wJO+8iCRhXFxuZXEgMCTvvInnmoTmsYLmoLnlhazlvI/mmK/vvJpcblxuJCR4ID0gXFxmcmFjey1iIFxccG0gXFxzcXJ0e2JeMi00YWN9fXsyYX0kJFxuXG7lhbbkuK0gJGJeMi00YWMkIOWPqyoq5Yik5Yir5byPKirvvIzorrDkvZwgJFxcRGVsdGEk44CCIn1dLCJmaWxlcyI6W10sImF0dGFjaG1lbnRzIjpbXSwicGFyZW50X21lc3NhZ2VfdXVpZCI6bnVsbH0seyJ1dWlkIjoidTcyMTcxMiIsInNlbmRlciI6Imh1bWFuIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDYtMjBUMDk6MDE6MDArMDA6MDAiLCJ1cGRhdGVkX2F0IjoiMjAyNi0wNi0yMFQwOTowMTowMCswMDowMCIsInRleHQiOiLliKTliKvlvI/mnInku4DkuYjnlKgiLCJjb250ZW50IjpbeyJ0eXBlIjoidGV4dCIsInRleHQiOiLliKTliKvlvI/mnInku4DkuYjnlKgifV0sImZpbGVzIjpbXSwiYXR0YWNobWVudHMiOltdLCJwYXJlbnRfbWVzc2FnZV91dWlkIjpudWxsfSx7InV1aWQiOiJ1MjUzMTI0Iiwic2VuZGVyIjoiYXNzaXN0YW50IiwiY3JlYXRlZF9hdCI6IjIwMjYtMDYtMjBUMDk6MDE6MjArMDA6MDAiLCJ1cGRhdGVkX2F0IjoiMjAyNi0wNi0yMFQwOTowMToyMCswMDowMCIsInRleHQiOiIiLCJjb250ZW50IjpbeyJ0eXBlIjoidGV4dCIsInRleHQiOiLliKTliKvlvI8gJFxcRGVsdGE9Yl4yLTRhYyQg5Yaz5a6a5qC555qE5oOF5Ya177yaXG5cbi0gJFxcRGVsdGE+MCTvvJrkuKTkuKrkuI3lkIzlrp7moLlcbi0gJFxcRGVsdGE9MCTvvJrkuIDkuKrph43moLlcbi0gJFxcRGVsdGE8MCTvvJrkuKTkuKrlhbHova3lpI3moLkifV0sImZpbGVzIjpbXSwiYXR0YWNobWVudHMiOltdLCJwYXJlbnRfbWVzc2FnZV91dWlkIjpudWxsfSx7InV1aWQiOiJ1Mjk5NDg1Iiwic2VuZGVyIjoiaHVtYW4iLCJjcmVhdGVkX2F0IjoiMjAyNi0wNi0yMFQwOTowMjowMCswMDowMCIsInVwZGF0ZWRfYXQiOiIyMDI2LTA2LTIwVDA5OjAyOjAwKzAwOjAwIiwidGV4dCI6IuS4vuS4qiDOlCDlsI/kuo4gMCDnmoTkvovlrZAiLCJjb250ZW50IjpbeyJ0eXBlIjoidGV4dCIsInRleHQiOiLkuL7kuKogzpQg5bCP5LqOIDAg55qE5L6L5a2QIn1dLCJmaWxlcyI6W10sImF0dGFjaG1lbnRzIjpbXSwicGFyZW50X21lc3NhZ2VfdXVpZCI6bnVsbH0seyJ1dWlkIjoidTkyNzI5NiIsInNlbmRlciI6ImFzc2lzdGFudCIsImNyZWF0ZWRfYXQiOiIyMDI2LTA2LTIwVDA5OjAyOjE4KzAwOjAwIiwidXBkYXRlZF9hdCI6IjIwMjYtMDYtMjBUMDk6MDI6MTgrMDA6MDAiLCJ0ZXh0IjoiIiwiY29udGVudCI6W3sidHlwZSI6InRleHQiLCJ0ZXh0Ijoi5q+U5aaCICR4XjIreCsxPTAk77yMJFxcRGVsdGE9MS00PS0zPDAk77yM6Kej5Li6ICR4PVxcZnJhY3stMVxccG1cXHNxcnR7M31cXCxpfXsyfSTjgIIifV0sImZpbGVzIjpbXSwiYXR0YWNobWVudHMiOltdLCJwYXJlbnRfbWVzc2FnZV91dWlkIjpudWxsfSx7InV1aWQiOiJ1NTY2NjcxIiwic2VuZGVyIjoiaHVtYW4iLCJjcmVhdGVkX2F0IjoiMjAyNi0wNi0yMFQwOTowMzowMCswMDowMCIsInVwZGF0ZWRfYXQiOiIyMDI2LTA2LTIwVDA5OjAzOjAwKzAwOjAwIiwidGV4dCI6IumhuuS+v+iusuS4i+mfpui+vuWumueQhiIsImNvbnRlbnQiOlt7InR5cGUiOiJ0ZXh0IiwidGV4dCI6IumhuuS+v+iusuS4i+mfpui+vuWumueQhiJ9XSwiZmlsZXMiOltdLCJhdHRhY2htZW50cyI6W10sInBhcmVudF9tZXNzYWdlX3V1aWQiOm51bGx9LHsidXVpZCI6InUyMTA3MTQiLCJzZW5kZXIiOiJhc3Npc3RhbnQiLCJjcmVhdGVkX2F0IjoiMjAyNi0wNi0yMFQwOTowMzoxNiswMDowMCIsInVwZGF0ZWRfYXQiOiIyMDI2LTA2LTIwVDA5OjAzOjE2KzAwOjAwIiwidGV4dCI6IiIsImNvbnRlbnQiOlt7InR5cGUiOiJ0ZXh0IiwidGV4dCI6IuiuvuS4pOaguSAkeF8xLHhfMiTvvJokeF8xK3hfMj0tXFxmcmFje2J9e2F9JO+8jCR4XzEgeF8yPVxcZnJhY3tjfXthfSTjgIIifV0sImZpbGVzIjpbXSwiYXR0YWNobWVudHMiOltdLCJwYXJlbnRfbWVzc2FnZV91dWlkIjpudWxsfV19LHsidXVpZCI6ImNvbnYtYiIsIm5hbWUiOiLnlKjku6PnoIHlv6vpgJ/orqHnrpciLCJzdW1tYXJ5IjoiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDYtMThUMTQ6MDA6MDArMDA6MDAiLCJ1cGRhdGVkX2F0IjoiMjAyNi0wNi0xOFQxNDowMjoyMCswMDowMCIsImFjY291bnQiOnsidXVpZCI6ImRlbW8tdXNlciJ9LCJjaGF0X21lc3NhZ2VzIjpbeyJ1dWlkIjoidTI0MTQ1NSIsInNlbmRlciI6Imh1bWFuIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDYtMThUMTQ6MDA6MDArMDA6MDAiLCJ1cGRhdGVkX2F0IjoiMjAyNi0wNi0xOFQxNDowMDowMCswMDowMCIsInRleHQiOiLluK7miJHnrpfkuIDkuIsgMSDliLAgMTAwIOaJgOacieaVtOaVsOeahOWSjCIsImNvbnRlbnQiOlt7InR5cGUiOiJ0ZXh0IiwidGV4dCI6IuW4ruaIkeeul+S4gOS4iyAxIOWIsCAxMDAg5omA5pyJ5pW05pWw55qE5ZKMIn1dLCJmaWxlcyI6W10sImF0dGFjaG1lbnRzIjpbXSwicGFyZW50X21lc3NhZ2VfdXVpZCI6bnVsbH0seyJ1dWlkIjoidTM3MjYxMSIsInNlbmRlciI6ImFzc2lzdGFudCIsImNyZWF0ZWRfYXQiOiIyMDI2LTA2LTE4VDE0OjAwOjIwKzAwOjAwIiwidXBkYXRlZF9hdCI6IjIwMjYtMDYtMThUMTQ6MDA6MjArMDA6MDAiLCJ0ZXh0IjoiIiwiY29udGVudCI6W3sidHlwZSI6InRoaW5raW5nIiwidGhpbmtpbmciOiLnlKjmsYLlkozlhazlvI/vvIzlho3nlKjku6PnoIHpqozor4HjgIIifSx7InR5cGUiOiJ0b29sX3VzZSIsIm5hbWUiOiJyZXBsIiwiaW5wdXQiOnsiY29kZSI6InByaW50KHN1bShyYW5nZSgxLCAxMDEpKSkifX0seyJ0eXBlIjoidG9vbF9yZXN1bHQiLCJjb250ZW50IjoiNTA1MCJ9LHsidHlwZSI6InRleHQiLCJ0ZXh0IjoiMSDliLAgMTAwIOeahOWSjOaYryAqKjUwNTAqKuOAgueUqOWFrOW8j++8miRcXGZyYWN7bihuKzEpfXsyfT1cXGZyYWN7MTAwXFx0aW1lcyAxMDF9ezJ9PTUwNTAk44CCIn1dLCJmaWxlcyI6W10sImF0dGFjaG1lbnRzIjpbXSwicGFyZW50X21lc3NhZ2VfdXVpZCI6bnVsbH0seyJ1dWlkIjoidTM4Nzc3Iiwic2VuZGVyIjoiaHVtYW4iLCJjcmVhdGVkX2F0IjoiMjAyNi0wNi0xOFQxNDowMTowMCswMDowMCIsInVwZGF0ZWRfYXQiOiIyMDI2LTA2LTE4VDE0OjAxOjAwKzAwOjAwIiwidGV4dCI6IumCoyAxIOWIsCAxMDAwIOWRoiIsImNvbnRlbnQiOlt7InR5cGUiOiJ0ZXh0IiwidGV4dCI6IumCoyAxIOWIsCAxMDAwIOWRoiJ9XSwiZmlsZXMiOltdLCJhdHRhY2htZW50cyI6W10sInBhcmVudF9tZXNzYWdlX3V1aWQiOm51bGx9LHsidXVpZCI6InU3OTQzMCIsInNlbmRlciI6ImFzc2lzdGFudCIsImNyZWF0ZWRfYXQiOiIyMDI2LTA2LTE4VDE0OjAxOjE4KzAwOjAwIiwidXBkYXRlZF9hdCI6IjIwMjYtMDYtMThUMTQ6MDE6MTgrMDA6MDAiLCJ0ZXh0IjoiIiwiY29udGVudCI6W3sidHlwZSI6InRvb2xfdXNlIiwibmFtZSI6InJlcGwiLCJpbnB1dCI6eyJjb2RlIjoicHJpbnQoc3VtKHJhbmdlKDEsIDEwMDEpKSkifX0seyJ0eXBlIjoidG9vbF9yZXN1bHQiLCJjb250ZW50IjoiNTAwNTAwIn0seyJ0eXBlIjoidGV4dCIsInRleHQiOiLmmK8gKio1MDA1MDAqKuOAgiJ9XSwiZmlsZXMiOltdLCJhdHRhY2htZW50cyI6W10sInBhcmVudF9tZXNzYWdlX3V1aWQiOm51bGx9LHsidXVpZCI6InU1MTc2MjYiLCJzZW5kZXIiOiJodW1hbiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA2LTE4VDE0OjAyOjAwKzAwOjAwIiwidXBkYXRlZF9hdCI6IjIwMjYtMDYtMThUMTQ6MDI6MDArMDA6MDAiLCJ0ZXh0Ijoi5YiX5Ye65YmNIDEwIOS4quaWkOazoumCo+WlkeaVsCIsImNvbnRlbnQiOlt7InR5cGUiOiJ0ZXh0IiwidGV4dCI6IuWIl+WHuuWJjSAxMCDkuKrmlpDms6LpgqPlpZHmlbAifV0sImZpbGVzIjpbXSwiYXR0YWNobWVudHMiOltdLCJwYXJlbnRfbWVzc2FnZV91dWlkIjpudWxsfSx7InV1aWQiOiJ1NTY2NjY0Iiwic2VuZGVyIjoiYXNzaXN0YW50IiwiY3JlYXRlZF9hdCI6IjIwMjYtMDYtMThUMTQ6MDI6MjArMDA6MDAiLCJ1cGRhdGVkX2F0IjoiMjAyNi0wNi0xOFQxNDowMjoyMCswMDowMCIsInRleHQiOiIiLCJjb250ZW50IjpbeyJ0eXBlIjoidG9vbF91c2UiLCJuYW1lIjoicmVwbCIsImlucHV0Ijp7ImNvZGUiOiJhLGI9MCwxO291dD1bXVxuZm9yIF8gaW4gcmFuZ2UoMTApOlxuIG91dC5hcHBlbmQoYSk7YSxiPWIsYStiXG5wcmludChvdXQpIn19LHsidHlwZSI6InRvb2xfcmVzdWx0IiwiY29udGVudCI6IlswLCAxLCAxLCAyLCAzLCA1LCA4LCAxMywgMjEsIDM0XSJ9LHsidHlwZSI6InRleHQiLCJ0ZXh0Ijoi5YmNIDEwIOS4qu+8mmAwLCAxLCAxLCAyLCAzLCA1LCA4LCAxMywgMjEsIDM0YOOAgiJ9XSwiZmlsZXMiOltdLCJhdHRhY2htZW50cyI6W10sInBhcmVudF9tZXNzYWdlX3V1aWQiOm51bGx9XX0seyJ1dWlkIjoiY29udi1jIiwibmFtZSI6IuadreW3nuS4pOWkqeihjOeoiyIsInN1bW1hcnkiOiIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wNi0xNVQyMDowMDowMCswMDowMCIsInVwZGF0ZWRfYXQiOiIyMDI2LTA2LTE1VDIwOjAyOjE2KzAwOjAwIiwiYWNjb3VudCI6eyJ1dWlkIjoiZGVtby11c2VyIn0sImNoYXRfbWVzc2FnZXMiOlt7InV1aWQiOiJ1MjYwNTUzIiwic2VuZGVyIjoiaHVtYW4iLCJjcmVhdGVkX2F0IjoiMjAyNi0wNi0xNVQyMDowMDowMCswMDowMCIsInVwZGF0ZWRfYXQiOiIyMDI2LTA2LTE1VDIwOjAwOjAwKzAwOjAwIiwidGV4dCI6Iui/meaYr+aIkeaVtOeQhueahOadreW3nuaZr+eCue+8jOW4ruaIkeaOkuS4qui9u+advueCueeahOS4pOWkqeihjOeoiyIsImNvbnRlbnQiOlt7InR5cGUiOiJ0ZXh0IiwidGV4dCI6Iui/meaYr+aIkeaVtOeQhueahOadreW3nuaZr+eCue+8jOW4ruaIkeaOkuS4qui9u+advueCueeahOS4pOWkqeihjOeoiyJ9XSwiZmlsZXMiOlt7ImZpbGVfbmFtZSI6IuihjOeoi+iNieeovy5wZGYiLCJmaWxlX3V1aWQiOiJkZW1vLWZpbGUtMSJ9XSwiYXR0YWNobWVudHMiOlt7ImZpbGVfbmFtZSI6IuaZr+eCuea4heWNlS50eHQiLCJmaWxlX3R5cGUiOiJ0eHQiLCJmaWxlX3NpemUiOiI5NiIsImV4dHJhY3RlZF9jb250ZW50Ijoi6KW/5rmWXG7ngbXpmpDlr7pcbuays+Wdiuihl1xu6KW/5rqq5rm/5ZywXG7ljZflrovlvqHooZcifV0sInBhcmVudF9tZXNzYWdlX3V1aWQiOm51bGx9LHsidXVpZCI6InU4Mjg4MTUiLCJzZW5kZXIiOiJhc3Npc3RhbnQiLCJjcmVhdGVkX2F0IjoiMjAyNi0wNi0xNVQyMDowMDoyNSswMDowMCIsInVwZGF0ZWRfYXQiOiIyMDI2LTA2LTE1VDIwOjAwOjI1KzAwOjAwIiwidGV4dCI6IiIsImNvbnRlbnQiOlt7InR5cGUiOiJ0ZXh0IiwidGV4dCI6Iue7meS9oOaOkuS6huS4quS4jei1tui3r+eahOS4pOWkqeeJiO+8mlxuXG4qKkRheSAx77yI6KW/5rmW54mH5Yy677yJKipcbi0g5LiK5Y2I77ya6KW/5rmW77yI5pat5qGl4oaS55m95aCk77yJXG4tIOS4i+WNiO+8mueBtemakOWvuiArIOmjnuadpeWzsFxuLSDlgo3mmZrvvJrmsrPlnYrooZflsI/lkINcblxuKipEYXkgMu+8iOiHqueEtuaFouiKguWlj++8iSoqXG4tIOS4iuWNiO+8muilv+a6qua5v+WcsOWdkOiIuVxuLSDkuIvljYjvvJrljZflrovlvqHooZfllp3ojLbmlLblsL4ifV0sImZpbGVzIjpbXSwiYXR0YWNobWVudHMiOltdLCJwYXJlbnRfbWVzc2FnZV91dWlkIjpudWxsfSx7InV1aWQiOiJ1MTM1MjYiLCJzZW5kZXIiOiJodW1hbiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA2LTE1VDIwOjAxOjAwKzAwOjAwIiwidXBkYXRlZF9hdCI6IjIwMjYtMDYtMTVUMjA6MDE6MDArMDA6MDAiLCJ0ZXh0Ijoi56ys5LiA5aSp5oOz5YaN6L275p2+5Lqb77yM54G16ZqQ5a+65Y675o6JIiwiY29udGVudCI6W3sidHlwZSI6InRleHQiLCJ0ZXh0Ijoi56ys5LiA5aSp5oOz5YaN6L275p2+5Lqb77yM54G16ZqQ5a+65Y675o6JIn1dLCJmaWxlcyI6W10sImF0dGFjaG1lbnRzIjpbXSwicGFyZW50X21lc3NhZ2VfdXVpZCI6bnVsbH0seyJ1dWlkIjoidTQzODI2NCIsInNlbmRlciI6ImFzc2lzdGFudCIsImNyZWF0ZWRfYXQiOiIyMDI2LTA2LTE1VDIwOjAxOjIwKzAwOjAwIiwidXBkYXRlZF9hdCI6IjIwMjYtMDYtMTVUMjA6MDE6MjArMDA6MDAiLCJ0ZXh0IjoiIiwiY29udGVudCI6W3sidHlwZSI6InRleHQiLCJ0ZXh0Ijoi5aW977yM56ys5LiA5aSp57K+566A5Li677ya6KW/5rmW5ryr5q2lIOKGkiDmuZbovrnlkpbllaHppobmrYfohJog4oaSIOays+Wdiuihl+aZmumlreOAgiJ9XSwiZmlsZXMiOltdLCJhdHRhY2htZW50cyI6W10sInBhcmVudF9tZXNzYWdlX3V1aWQiOm51bGx9LHsidXVpZCI6InUyMDI0OTAiLCJzZW5kZXIiOiJodW1hbiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA2LTE1VDIwOjAyOjAwKzAwOjAwIiwidXBkYXRlZF9hdCI6IjIwMjYtMDYtMTVUMjA6MDI6MDArMDA6MDAiLCJ0ZXh0Ijoi5rmW6L655ZKW5ZWh6aaG5pyJ5o6o6I2Q5ZCXIiwiY29udGVudCI6W3sidHlwZSI6InRleHQiLCJ0ZXh0Ijoi5rmW6L655ZKW5ZWh6aaG5pyJ5o6o6I2Q5ZCXIn1dLCJmaWxlcyI6W10sImF0dGFjaG1lbnRzIjpbXSwicGFyZW50X21lc3NhZ2VfdXVpZCI6bnVsbH0seyJ1dWlkIjoidTcyNTgxOSIsInNlbmRlciI6ImFzc2lzdGFudCIsImNyZWF0ZWRfYXQiOiIyMDI2LTA2LTE1VDIwOjAyOjE2KzAwOjAwIiwidXBkYXRlZF9hdCI6IjIwMjYtMDYtMTVUMjA6MDI6MTYrMDA6MDAiLCJ0ZXh0IjoiIiwiY29udGVudCI6W3sidHlwZSI6InRleHQiLCJ0ZXh0Ijoi5YyX5bGx6KGX5LiA5bim55qE54us56uL5ZKW5ZWh6aaG77yM6Zyy5Y+w6IO955yL5rmW77yM6YCC5ZCI5Y+R5ZGG44CCIn1dLCJmaWxlcyI6W10sImF0dGFjaG1lbnRzIjpbXSwicGFyZW50X21lc3NhZ2VfdXVpZCI6bnVsbH1dfSx7InV1aWQiOiJjb252LWQiLCJuYW1lIjoi5Lit6K+R6Iux5ram6ImyIiwic3VtbWFyeSI6IiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA2LTEyVDEwOjAwOjAwKzAwOjAwIiwidXBkYXRlZF9hdCI6IjIwMjYtMDYtMTJUMTA6MDE6MTArMDA6MDAiLCJhY2NvdW50Ijp7InV1aWQiOiJkZW1vLXVzZXIifSwiY2hhdF9tZXNzYWdlcyI6W3sidXVpZCI6InU2MzYzOTMiLCJzZW5kZXIiOiJodW1hbiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA2LTEyVDEwOjAwOjAwKzAwOjAwIiwidXBkYXRlZF9hdCI6IjIwMjYtMDYtMTJUMTA6MDA6MDArMDA6MDAiLCJ0ZXh0Ijoi5oqK6L+Z5Y+l57+76K+R5oiQ5Zyw6YGT6Iux5paH77ya6L+Z5Liq5bel5YW36K6p5oiR55yB5LqG5b6I5aSa5pe26Ze0IiwiY29udGVudCI6W3sidHlwZSI6InRleHQiLCJ0ZXh0Ijoi5oqK6L+Z5Y+l57+76K+R5oiQ5Zyw6YGT6Iux5paH77ya6L+Z5Liq5bel5YW36K6p5oiR55yB5LqG5b6I5aSa5pe26Ze0In1dLCJmaWxlcyI6W10sImF0dGFjaG1lbnRzIjpbXSwicGFyZW50X21lc3NhZ2VfdXVpZCI6bnVsbH0seyJ1dWlkIjoidTUzMDQ3NSIsInNlbmRlciI6ImFzc2lzdGFudCIsImNyZWF0ZWRfYXQiOiIyMDI2LTA2LTEyVDEwOjAwOjEyKzAwOjAwIiwidXBkYXRlZF9hdCI6IjIwMjYtMDYtMTJUMTA6MDA6MTIrMDA6MDAiLCJ0ZXh0IjoiIiwiY29udGVudCI6W3sidHlwZSI6InRleHQiLCJ0ZXh0Ijoi5Yeg56eN6K+05rOV77yaXG4tIFRoaXMgdG9vbCBzYXZlcyBtZSBhIHRvbiBvZiB0aW1lLlxuLSBUaGlzIHRvb2wgaXMgYSByZWFsIHRpbWUtc2F2ZXIuXG5cbuWPo+ivremHjOesrOS6jOenjeabtOiHqueEtuOAgiJ9XSwiZmlsZXMiOltdLCJhdHRhY2htZW50cyI6W10sInBhcmVudF9tZXNzYWdlX3V1aWQiOm51bGx9LHsidXVpZCI6InU0MDAwNDMiLCJzZW5kZXIiOiJodW1hbiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA2LTEyVDEwOjAxOjAwKzAwOjAwIiwidXBkYXRlZF9hdCI6IjIwMjYtMDYtMTJUMTA6MDE6MDArMDA6MDAiLCJ0ZXh0Ijoi5pu05q2j5byP5LiA54K55ZGiIiwiY29udGVudCI6W3sidHlwZSI6InRleHQiLCJ0ZXh0Ijoi5pu05q2j5byP5LiA54K55ZGiIn1dLCJmaWxlcyI6W10sImF0dGFjaG1lbnRzIjpbXSwicGFyZW50X21lc3NhZ2VfdXVpZCI6bnVsbH0seyJ1dWlkIjoidTI2NTc1NyIsInNlbmRlciI6ImFzc2lzdGFudCIsImNyZWF0ZWRfYXQiOiIyMDI2LTA2LTEyVDEwOjAxOjEwKzAwOjAwIiwidXBkYXRlZF9hdCI6IjIwMjYtMDYtMTJUMTA6MDE6MTArMDA6MDAiLCJ0ZXh0IjoiIiwiY29udGVudCI6W3sidHlwZSI6InRleHQiLCJ0ZXh0IjoiKlRoaXMgdG9vbCBoYXMgc2lnbmlmaWNhbnRseSBpbXByb3ZlZCBteSBlZmZpY2llbmN5LioifV0sImZpbGVzIjpbXSwiYXR0YWNobWVudHMiOltdLCJwYXJlbnRfbWVzc2FnZV91dWlkIjpudWxsfV19LHsidXVpZCI6ImNvbnYtZSIsIm5hbWUiOiLoh6rmiJHku4vnu43mtqboibIiLCJzdW1tYXJ5IjoiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDYtMTBUMjE6MDA6MDArMDA6MDAiLCJ1cGRhdGVkX2F0IjoiMjAyNi0wNi0xMFQyMTowMDoxNCswMDowMCIsImFjY291bnQiOnsidXVpZCI6ImRlbW8tdXNlciJ9LCJjaGF0X21lc3NhZ2VzIjpbeyJ1dWlkIjoidTk1MDUyNSIsInNlbmRlciI6Imh1bWFuIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDYtMTBUMjE6MDA6MDArMDA6MDAiLCJ1cGRhdGVkX2F0IjoiMjAyNi0wNi0xMFQyMTowMDowMCswMDowMCIsInRleHQiOiLluK7miJHmiorov5nmrrXoh6rmiJHku4vnu43mtqboibLlvpfmm7TnroDmtIHvvJrmiJHmmK/kuIDlkI3lgZrkuobkupTlubTnmoTkuqflk4Horr7orqHluIjvvIzlubPml7bllpzmrKLnoJTnqbblkITnp43mlYjnjoflt6XlhbciLCJjb250ZW50IjpbeyJ0eXBlIjoidGV4dCIsInRleHQiOiLluK7miJHmiorov5nmrrXoh6rmiJHku4vnu43mtqboibLlvpfmm7TnroDmtIHvvJrmiJHmmK/kuIDlkI3lgZrkuobkupTlubTnmoTkuqflk4Horr7orqHluIjvvIzlubPml7bllpzmrKLnoJTnqbblkITnp43mlYjnjoflt6XlhbcifV0sImZpbGVzIjpbXSwiYXR0YWNobWVudHMiOltdLCJwYXJlbnRfbWVzc2FnZV91dWlkIjpudWxsfSx7InV1aWQiOiJ1MjIxNDQ1Iiwic2VuZGVyIjoiYXNzaXN0YW50IiwiY3JlYXRlZF9hdCI6IjIwMjYtMDYtMTBUMjE6MDA6MTQrMDA6MDAiLCJ1cGRhdGVkX2F0IjoiMjAyNi0wNi0xMFQyMTowMDoxNCswMDowMCIsInRleHQiOiIiLCJjb250ZW50IjpbeyJ0eXBlIjoidGV4dCIsInRleHQiOiLjgIzkuqflk4Horr7orqHluIjvvIzkupTlubTnu4/pqozvvIzng63oobfmipjohb7mlYjnjoflt6XlhbfjgILjgI1cblxu5pu05a6M5pW054mI77ya44CM5oiR5piv5LiA5ZCN5pyJ5LqU5bm057uP6aqM55qE5Lqn5ZOB6K6+6K6h5biI77yM5bmz5pe25Zac5qyi56CU56m25pWI546H5bel5YW344CB5omT56Oo5bel5L2c5rWB44CC44CNIn1dLCJmaWxlcyI6W10sImF0dGFjaG1lbnRzIjpbXSwicGFyZW50X21lc3NhZ2VfdXVpZCI6bnVsbH1dfSx7InV1aWQiOiJjb252LWYiLCJuYW1lIjoiUHl0aG9uIOe8qei/m+aKpemUmSIsInN1bW1hcnkiOiIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wNi0wOFQxNjowMDowMCswMDowMCIsInVwZGF0ZWRfYXQiOiIyMDI2LTA2LTA4VDE2OjAxOjEyKzAwOjAwIiwiYWNjb3VudCI6eyJ1dWlkIjoiZGVtby11c2VyIn0sImNoYXRfbWVzc2FnZXMiOlt7InV1aWQiOiJ1MjMxMzUiLCJzZW5kZXIiOiJodW1hbiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA2LTA4VDE2OjAwOjAwKzAwOjAwIiwidXBkYXRlZF9hdCI6IjIwMjYtMDYtMDhUMTY6MDA6MDArMDA6MDAiLCJ0ZXh0IjoiUHl0aG9uIOaKpemUmSBJbmRlbnRhdGlvbkVycm9yIOaYr+S7gOS5iOaEj+aAnSIsImNvbnRlbnQiOlt7InR5cGUiOiJ0ZXh0IiwidGV4dCI6IlB5dGhvbiDmiqXplJkgSW5kZW50YXRpb25FcnJvciDmmK/ku4DkuYjmhI/mgJ0ifV0sImZpbGVzIjpbXSwiYXR0YWNobWVudHMiOltdLCJwYXJlbnRfbWVzc2FnZV91dWlkIjpudWxsfSx7InV1aWQiOiJ1ODIwMzY3Iiwic2VuZGVyIjoiYXNzaXN0YW50IiwiY3JlYXRlZF9hdCI6IjIwMjYtMDYtMDhUMTY6MDA6MTYrMDA6MDAiLCJ1cGRhdGVkX2F0IjoiMjAyNi0wNi0wOFQxNjowMDoxNiswMDowMCIsInRleHQiOiIiLCJjb250ZW50IjpbeyJ0eXBlIjoidGV4dCIsInRleHQiOiLnvKnov5vplJnor6/jgIJQeXRob24g55So57yp6L+b5YiS5YiG5Luj56CB5Z2X77yM5bi46KeB5Y6f5Zug77yaXG5cbmBgYHB5dGhvblxuZGVmIGYoKTpcbnByaW50KCdoaScpICAgIyDinYwg5bCR5LqG57yp6L+bXG5gYGBcblxu5pS55oiQ77yaXG5cbmBgYHB5dGhvblxuZGVmIGYoKTpcbiAgICBwcmludCgnaGknKSAgIyDinIUg57yp6L+bIDQg56m65qC8XG5gYGBcblxu5Yir5re355SoIFRhYiDlkoznqbrmoLzjgIIifV0sImZpbGVzIjpbXSwiYXR0YWNobWVudHMiOltdLCJwYXJlbnRfbWVzc2FnZV91dWlkIjpudWxsfSx7InV1aWQiOiJ1MTYwMjk3Iiwic2VuZGVyIjoiaHVtYW4iLCJjcmVhdGVkX2F0IjoiMjAyNi0wNi0wOFQxNjowMTowMCswMDowMCIsInVwZGF0ZWRfYXQiOiIyMDI2LTA2LTA4VDE2OjAxOjAwKzAwOjAwIiwidGV4dCI6IlZTQ29kZSDmgI7kuYjnu5/kuIDmiJDnqbrmoLwiLCJjb250ZW50IjpbeyJ0eXBlIjoidGV4dCIsInRleHQiOiJWU0NvZGUg5oCO5LmI57uf5LiA5oiQ56m65qC8In1dLCJmaWxlcyI6W10sImF0dGFjaG1lbnRzIjpbXSwicGFyZW50X21lc3NhZ2VfdXVpZCI6bnVsbH0seyJ1dWlkIjoidTcwMDkwNSIsInNlbmRlciI6ImFzc2lzdGFudCIsImNyZWF0ZWRfYXQiOiIyMDI2LTA2LTA4VDE2OjAxOjEyKzAwOjAwIiwidXBkYXRlZF9hdCI6IjIwMjYtMDYtMDhUMTY6MDE6MTIrMDA6MDAiLCJ0ZXh0IjoiIiwiY29udGVudCI6W3sidHlwZSI6InRleHQiLCJ0ZXh0Ijoi5bqV6YOo54q25oCB5qCP54K544CMU3BhY2VzIC8gVGFi44CN4oaSIOmAiSAqQ29udmVydCBJbmRlbnRhdGlvbiB0byBTcGFjZXMq77yM5bm25oqKIFRhYiBTaXplIOiuvuS4uiA044CCIn1dLCJmaWxlcyI6W10sImF0dGFjaG1lbnRzIjpbXSwicGFyZW50X21lc3NhZ2VfdXVpZCI6bnVsbH1dfSx7InV1aWQiOiJjb252LWciLCJuYW1lIjoi5LiJ5YiG5YyW5YGl6Lqr6K6h5YiSIiwic3VtbWFyeSI6IiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA2LTA1VDA3OjMwOjAwKzAwOjAwIiwidXBkYXRlZF9hdCI6IjIwMjYtMDYtMDVUMDc6MzA6MjArMDA6MDAiLCJhY2NvdW50Ijp7InV1aWQiOiJkZW1vLXVzZXIifSwiY2hhdF9tZXNzYWdlcyI6W3sidXVpZCI6InUyODUzMTkiLCJzZW5kZXIiOiJodW1hbiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA2LTA1VDA3OjMwOjAwKzAwOjAwIiwidXBkYXRlZF9hdCI6IjIwMjYtMDYtMDVUMDc6MzA6MDArMDA6MDAiLCJ0ZXh0Ijoi5biu5oiR5Yi25a6a5LiA5Liq5paw5omL5LiJ5YiG5YyW5YGl6Lqr6K6h5YiSIiwiY29udGVudCI6W3sidHlwZSI6InRleHQiLCJ0ZXh0Ijoi5biu5oiR5Yi25a6a5LiA5Liq5paw5omL5LiJ5YiG5YyW5YGl6Lqr6K6h5YiSIn1dLCJmaWxlcyI6W10sImF0dGFjaG1lbnRzIjpbXSwicGFyZW50X21lc3NhZ2VfdXVpZCI6bnVsbH0seyJ1dWlkIjoidTI1MjQ3NiIsInNlbmRlciI6ImFzc2lzdGFudCIsImNyZWF0ZWRfYXQiOiIyMDI2LTA2LTA1VDA3OjMwOjIwKzAwOjAwIiwidXBkYXRlZF9hdCI6IjIwMjYtMDYtMDVUMDc6MzA6MjArMDA6MDAiLCJ0ZXh0IjoiIiwiY29udGVudCI6W3sidHlwZSI6InRleHQiLCJ0ZXh0IjoiKirkuInliIbljJbvvIjnu4PkuIDkvJHkuIDlj4vlpb3niYjvvIkqKlxuLSBEYXkgQSDog7gr5LiJ5aS077ya5Y2n5o6o44CB5LiK5pac5ZOR6ZOD44CB57uz57Si5LiL5Y6LXG4tIERheSBCIOiDjCvkuozlpLTvvJrlvJXkvZMv6auY5L2N5LiL5ouJ44CB5YiS6Ii544CB5byv5Li+XG4tIERheSBDIOiFvyvogqnvvJrmt7HoubLjgIHohb/kuL7jgIHmjqjkuL7jgIHkvqflubPkuL5cblxu5q+P5Liq5Yqo5L2cIDMg57uEIMOXIDjigJMxMiDmrKHvvIzmlrDmiYvlhYjmiorliqjkvZzlgZrmoIflh4bjgIIifV0sImZpbGVzIjpbXSwiYXR0YWNobWVudHMiOltdLCJwYXJlbnRfbWVzc2FnZV91dWlkIjpudWxsfV19LHsidXVpZCI6ImNvbnYtaCIsIm5hbWUiOiLpuKHog7jogonoj5zosLEiLCJzdW1tYXJ5IjoiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDYtMDJUMTg6MzA6MDArMDA6MDAiLCJ1cGRhdGVkX2F0IjoiMjAyNi0wNi0wMlQxODozMDoxOCswMDowMCIsImFjY291bnQiOnsidXVpZCI6ImRlbW8tdXNlciJ9LCJjaGF0X21lc3NhZ2VzIjpbeyJ1dWlkIjoidTIyNTc2MSIsInNlbmRlciI6Imh1bWFuIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDYtMDJUMTg6MzA6MDArMDA6MDAiLCJ1cGRhdGVkX2F0IjoiMjAyNi0wNi0wMlQxODozMDowMCswMDowMCIsInRleHQiOiLnlKjpuKHog7jogonlgZrlh6DpgZPnroDljZXnmoToj5wiLCJjb250ZW50IjpbeyJ0eXBlIjoidGV4dCIsInRleHQiOiLnlKjpuKHog7jogonlgZrlh6DpgZPnroDljZXnmoToj5wifV0sImZpbGVzIjpbXSwiYXR0YWNobWVudHMiOltdLCJwYXJlbnRfbWVzc2FnZV91dWlkIjpudWxsfSx7InV1aWQiOiJ1MTg4MDIxIiwic2VuZGVyIjoiYXNzaXN0YW50IiwiY3JlYXRlZF9hdCI6IjIwMjYtMDYtMDJUMTg6MzA6MTgrMDA6MDAiLCJ1cGRhdGVkX2F0IjoiMjAyNi0wNi0wMlQxODozMDoxOCswMDowMCIsInRleHQiOiIiLCJjb250ZW50IjpbeyJ0eXBlIjoidGV4dCIsInRleHQiOiLkuInpgZPlpb3kuIrmiYvnmoTvvJpcbjEuICoq6buR5qSS6bih6IO4KirvvJrliIfniYfohYwgMTAg5YiG6ZKf77yM54WO5Yiw5b6u54Sm77yM5pKS6buR5qSS44CCXG4yLiAqKum4oeiDuOaymeaLiSoq77ya54Wu54af5pKV5LidICsg55Sf6I+c546J57GzICsg5rK56YaL5rGB44CCXG4zLiAqKueFp+eDp+m4oeiDuCoq77ya54WO5ZCO5reL54Wn54On5rGB5pS25rGB44CCIn1dLCJmaWxlcyI6W10sImF0dGFjaG1lbnRzIjpbXSwicGFyZW50X21lc3NhZ2VfdXVpZCI6bnVsbH1dfSx7InV1aWQiOiJjb252LWkiLCJuYW1lIjoi44CK5Y6f5YiZ44CL6K+75Lmm56yU6K6wIiwic3VtbWFyeSI6IiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA1LTI4VDIyOjAwOjAwKzAwOjAwIiwidXBkYXRlZF9hdCI6IjIwMjYtMDUtMjhUMjI6MDA6MjArMDA6MDAiLCJhY2NvdW50Ijp7InV1aWQiOiJkZW1vLXVzZXIifSwiY2hhdF9tZXNzYWdlcyI6W3sidXVpZCI6InU0NTE2NSIsInNlbmRlciI6Imh1bWFuIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDUtMjhUMjI6MDA6MDArMDA6MDAiLCJ1cGRhdGVkX2F0IjoiMjAyNi0wNS0yOFQyMjowMDowMCswMDowMCIsInRleHQiOiLluK7miJHmiorjgIrljp/liJnjgIvov5nmnKzkuabnmoTmoLjlv4Pop4LngrnmgLvnu5PmiJDkuInmnaEiLCJjb250ZW50IjpbeyJ0eXBlIjoidGV4dCIsInRleHQiOiLluK7miJHmiorjgIrljp/liJnjgIvov5nmnKzkuabnmoTmoLjlv4Pop4LngrnmgLvnu5PmiJDkuInmnaEifV0sImZpbGVzIjpbXSwiYXR0YWNobWVudHMiOltdLCJwYXJlbnRfbWVzc2FnZV91dWlkIjpudWxsfSx7InV1aWQiOiJ1Mzg1ODExIiwic2VuZGVyIjoiYXNzaXN0YW50IiwiY3JlYXRlZF9hdCI6IjIwMjYtMDUtMjhUMjI6MDA6MjArMDA6MDAiLCJ1cGRhdGVkX2F0IjoiMjAyNi0wNS0yOFQyMjowMDoyMCswMDowMCIsInRleHQiOiIiLCJjb250ZW50IjpbeyJ0eXBlIjoidGV4dCIsInRleHQiOiIxLiAqKuaLpeaKseeOsOWunuOAgeebtOmdoumXrumimCoq77ya55eb6IumICsg5Y+N5oCdID0g6L+b5q2l44CCXG4yLiAqKuaegeW6puaxguecn+OAgeaegeW6pumAj+aYjioq77ya5oqK5YiG5q2n5pGG5Yiw5Y+w6Z2i5LiK6Kej5Yaz44CCXG4zLiAqKueUqOWOn+WImeWMluWGs+etlioq77ya5oqK5Y+N5aSN5Ye6546w55qE5oOF5Ya15rKJ5reA5oiQ5Y+v5aSN55So55qE5Y6f5YiZ44CCIn1dLCJmaWxlcyI6W10sImF0dGFjaG1lbnRzIjpbXSwicGFyZW50X21lc3NhZ2VfdXVpZCI6bnVsbH1dfSx7InV1aWQiOiJjb252LWoiLCJuYW1lIjoi5q2j5oCB5YiG5biD5YWs5byPIiwic3VtbWFyeSI6IiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA1LTI1VDExOjAwOjAwKzAwOjAwIiwidXBkYXRlZF9hdCI6IjIwMjYtMDUtMjVUMTE6MDA6MTYrMDA6MDAiLCJhY2NvdW50Ijp7InV1aWQiOiJkZW1vLXVzZXIifSwiY2hhdF9tZXNzYWdlcyI6W3sidXVpZCI6InU5NjY4NzAiLCJzZW5kZXIiOiJodW1hbiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA1LTI1VDExOjAwOjAwKzAwOjAwIiwidXBkYXRlZF9hdCI6IjIwMjYtMDUtMjVUMTE6MDA6MDArMDA6MDAiLCJ0ZXh0Ijoi5q2j5oCB5YiG5biD55qE5qaC546H5a+G5bqm5Ye95pWw6ZW/5LuA5LmI5qC3IiwiY29udGVudCI6W3sidHlwZSI6InRleHQiLCJ0ZXh0Ijoi5q2j5oCB5YiG5biD55qE5qaC546H5a+G5bqm5Ye95pWw6ZW/5LuA5LmI5qC3In1dLCJmaWxlcyI6W10sImF0dGFjaG1lbnRzIjpbXSwicGFyZW50X21lc3NhZ2VfdXVpZCI6bnVsbH0seyJ1dWlkIjoidTIxMDgzMyIsInNlbmRlciI6ImFzc2lzdGFudCIsImNyZWF0ZWRfYXQiOiIyMDI2LTA1LTI1VDExOjAwOjE2KzAwOjAwIiwidXBkYXRlZF9hdCI6IjIwMjYtMDUtMjVUMTE6MDA6MTYrMDA6MDAiLCJ0ZXh0IjoiIiwiY29udGVudCI6W3sidHlwZSI6InRoaW5raW5nIiwidGhpbmtpbmciOiLnu5nlh7rmoIflh4YgUERGIOWFrOW8j+W5tuivtOaYjuWPguaVsOOAgiJ9LHsidHlwZSI6InRleHQiLCJ0ZXh0Ijoi5q2j5oCB5YiG5biDICROKFxcbXUsXFxzaWdtYV4yKSQg55qE5qaC546H5a+G5bqm5Ye95pWw77yaXG5cbiQkZih4KT1cXGZyYWN7MX17XFxzaWdtYVxcc3FydHsyXFxwaX19XFwsZV57LVxcZnJhY3soeC1cXG11KV4yfXsyXFxzaWdtYV4yfX0kJFxuXG7lhbbkuK0gJFxcbXUkIOaYr+Wdh+WAvOOAgSRcXHNpZ21hJCDmmK/moIflh4blt67jgIIifV0sImZpbGVzIjpbXSwiYXR0YWNobWVudHMiOltdLCJwYXJlbnRfbWVzc2FnZV91dWlkIjpudWxsfV19XSwicmVmbGVjdGlvbnMiOnsiYWNjb3VudF91dWlkIjoiZGVtby11c2VyIiwiZmVlZGJhY2siOltdLCJyZWZsZWN0aW9ucyI6W3sicGVyaW9kIjoiMjAyNi0wNiIsImNvbnRlbnQiOnsicGVyaW9kIjoiMjAyNiDlubQgNiDmnIgiLCJoZXJvX3RpdGxlIjoi5oqK5oOz5rOV56Oo5oiQ6IO95Lqk5LuY55qE5Lic6KW/44CCIiwiaGVyb19ib2R5Ijoi6L+Z5Liq5pyI5aSn6YOo5YiG5pe26Ze06Iqx5Zyo5omT56Oo5LiK4oCU4oCU5oqK5LiA54mI57KX57OZ55qE6K6+6K6h56i/5pS55oiQ6IO96L+b6K+E5a6h55qE5pa55qGI77yM5oqK5pWj6JC955qE5pWI546H5bel5YW35pW055CG5oiQ6IO957uZ5Yir5Lq655So55qE5b2i5oCB44CC5L2g5Lmg5oOv5YWI55So5LiA5pW05q615pe26Ze05oqK6LWE5paZ5LiA5qyh5oCn6Zeu5riF5qWa77yM5YaN6Ieq5bex5YGa5Yaz5a6a77ybQ2xhdWRlIOabtOWkmuaYr+WcqOWBmuajgOe0ouWSjOWIneeov++8jOWIpOaWreWni+e7iOWcqOS9oOaJi+S4iuOAgiIsInN0YXRzIjpbeyJsYWJlbCI6IuWvueivneaVsCIsIm4iOiIxMCIsInN1YmxhYmVsIjoi5YiG5biD5ZyoIDgg5Liq5rS76LeD5pelIn0seyJsYWJlbCI6IuWNleasoeS8muivneS4reS9jeaVsCIsIm4iOiLnuqYgMiDlsI/ml7YiLCJzdWJsYWJlbCI6IjExOCDliIbpkp8ifSx7ImxhYmVsIjoi5pyA5rS76LeD5pe25q61IiwibiI6IuWRqOS4iSIsInN1YmxhYmVsIjoi5LiK5Y2IIDEwIOeCueWJjeWQjiJ9XSwidG9waWNzIjpbeyJ0aXRsZSI6IuS6p+WTgeiuvuiuoeS4juivhOWuoSIsInBlcmNlbnQiOjM4LCJkZXNjcmlwdGlvbiI6IumhtemdouS/oeaBr+WvhuW6puOAgeWNoeeJh+eyvueugOOAgUFJIOaooeWdl+eahOS6pOS6kuaWh+ahiCJ9LHsidGl0bGUiOiLmlbDlrabkuI7ku6PnoIHmsYLop6MiLCJwZXJjZW50IjoyNywiZGVzY3JpcHRpb24iOiLkuozmrKHmlrnnqIvliKTliKvlvI/jgIHmsYLlkozkuI7mlpDms6LpgqPlpZHvvIznlKjku6PnoIHkuqTlj4npqozor4Hnu5PmnpwifSx7InRpdGxlIjoi6KGM56iL5LiO55Sf5rS75a6J5o6SIiwicGVyY2VudCI6MjEsImRlc2NyaXB0aW9uIjoi5p2t5bee5Lik5aSp6L275p2+54mI6KGM56iL44CB5ZKW5ZWh6aaG5LiO5pma6aWt55qE5Y+W6IiNIn0seyJ0aXRsZSI6IuaWh+ahiOS4jue/u+ivkSIsInBlcmNlbnQiOjE0LCJkZXNjcmlwdGlvbiI6IuS4reivkeiLseeahOWcsOmBk+ivtOazleOAgeiHquaIkeS7i+e7jeeahOa2puiJsiJ9XSwiYWJvdXRfeW91cl90aW1lIjpbeyJ0aXRsZSI6IuS9oOeahOaPkOmXruaAu+aYr+W4puedgOe6puadn+adoeS7tuOAgiIsImJvZHkiOiLml6DorrrmmK/mjpLooYznqIvov5jmmK/mlLnorr7orqHvvIzkvaDpg73kvJrlhYjor7TmuIXjgIzopoHovbvmnb7jgI3jgIzopoHmm7TntKflh5HjgI3ov5nnsbvovrnnlYzvvIzogIzkuI3mmK/orqnlr7nmlrnoh6rnlLHlj5HmjKXigJTigJTnnIHmjonkuoblpKfph4/mnaXlm57jgIIifSx7InRpdGxlIjoi6aqM6K+B5oSP6K+G5b6I5by644CCIiwiYm9keSI6IumXruaxguWSjOWFrOW8j+aXtuS9oOS8mumhuuaJi+imgeS4gOasoeS7o+eggemqjOeul++8jOmXrue/u+ivkeaXtuS8mui/vemXruOAjOabtOato+W8j+S4gOeCueWRouOAje+8jOW+iOWwkeWBnOWcqOesrOS4gOS4quetlOahiOS4iuOAgiJ9XSwiZXhwYW5kaW5nX3lvdXJfc2tpbGxzIjpbeyJza2lsbCI6Iue7k+aehOWMluaPkOmXriIsInRpdGxlIjoi5YWI57uZ6IOM5pmv5ZKM6ZmQ5Yi277yM5YaN5o+Q6KaB5rGC44CCIiwiYm9keSI6IuaOkuadreW3nuihjOeoi+aXtuS9oOWFiOivtOaYjuOAjOi/meaYr+aIkeaVtOeQhueahOaZr+eCueOAjeWGjeimgeaxguOAjOi9u+advueCueOAje+8jOW+l+WIsOeahOaWueahiOS4jemcgOimgei/lOW3peOAgiJ9LHsic2tpbGwiOiLkuqTlj4npqozor4EiLCJ0aXRsZSI6IumHjeimgee7k+iuuuS4gOWumuimgeesrOS6jOenjeaWueW8j+ehruiupOOAgiIsImJvZHkiOiLmlbDlrabpopjmi7/ku6PnoIHot5HkuIDpgY3jgIHnv7vor5HopoHkuKTnp43or7Tms5Xlr7nmr5TvvIzov5nkuKrkuaDmg6/kvJrorqnnu5Porrrmm7TnqLPjgIIifV0sIndvcnRoX3RoaW5raW5nX2Fib3V0IjpbeyJ0aXRsZSI6IuaVtOeQhuW+l+W+iOe7hu+8jOaUtuWwvueVpeaFouOAgiIsImJvZHkiOiLorr7orqHmlrnmoYjlkozooYznqIvpg73lgZrliLDkuoblj6/miafooYznmoTnqIvluqbvvIzkvYblkI7nu63mmK/lkKbokL3lnLDlvojlsJHlho3mj5DotbfjgILmiorjgIzmlbTnkIblrozjgI3lkozjgIzlj5Hlh7rljrvjgI3lvZPmiJDkuKTku7bkuovmnaXlronmjpLvvIzlj6/og73kvJrmm7TpobrjgIIifV19fV19LCJsb2dpbkhpc3RvcnkiOlt7ImFjY291bnRfdXVpZCI6ImRlbW8tdXNlciIsInRpbWVzdGFtcCI6IjIwMjYtMDYtMjBUMDk6MTI6MDQrMDA6MDAiLCJpcF9hZGRyZXNzIjoiMjAzLjAuMTEzLjI0IiwibWV0aG9kIjoiZ29vZ2xlIiwidXNlcl9hZ2VudCI6eyJicm93c2VyX2ZhbWlseSI6IkNocm9tZSIsImJyb3dzZXJfdmVyc2lvbiI6IjE0Ni4wLjAiLCJvc19mYW1pbHkiOiJtYWNPUyIsIm9zX3ZlcnNpb24iOiIxNSJ9LCJsb2NhdGlvbl9pbmZvIjp7ImNvdW50cnkiOiJDTiIsInJlZ2lvbiI6IlNoYW5naGFpIiwiY2l0eSI6IlNoYW5naGFpIn19LHsiYWNjb3VudF91dWlkIjoiZGVtby11c2VyIiwidGltZXN0YW1wIjoiMjAyNi0wNi0xMlQyMjo0MTozNyswMDowMCIsImlwX2FkZHJlc3MiOiIyMDMuMC4xMTMuMjQiLCJtZXRob2QiOiJnb29nbGUiLCJ1c2VyX2FnZW50Ijp7ImJyb3dzZXJfZmFtaWx5IjoiU2FmYXJpIiwiYnJvd3Nlcl92ZXJzaW9uIjoiMTguNCIsIm9zX2ZhbWlseSI6ImlPUyIsIm9zX3ZlcnNpb24iOiIxOCJ9LCJsb2NhdGlvbl9pbmZvIjp7ImNvdW50cnkiOiJDTiIsInJlZ2lvbiI6IlNoYW5naGFpIiwiY2l0eSI6IlNoYW5naGFpIn19LHsiYWNjb3VudF91dWlkIjoiZGVtby11c2VyIiwidGltZXN0YW1wIjoiMjAyNi0wNi0wMlQxODowNToxMSswMDowMCIsImlwX2FkZHJlc3MiOiIxOTguNTEuMTAwLjciLCJtZXRob2QiOiJlbWFpbCIsInVzZXJfYWdlbnQiOnsiYnJvd3Nlcl9mYW1pbHkiOiJFZGdlIiwiYnJvd3Nlcl92ZXJzaW9uIjoiMTQ1LjAuMCIsIm9zX2ZhbWlseSI6IldpbmRvd3MiLCJvc192ZXJzaW9uIjoiMTEifSwibG9jYXRpb25faW5mbyI6eyJjb3VudHJ5IjoiQ04iLCJyZWdpb24iOiJaaGVqaWFuZyIsImNpdHkiOiJIYW5nemhvdSJ9fV19"),function(c){return c.charCodeAt(0)})));
 document.title='Claude 数据查看器 '+APP_VERSION;
 document.addEventListener('DOMContentLoaded',()=>{const b=document.getElementById('ver-badge');if(b)b.textContent=APP_VERSION;});
 if(typeof marked!=='undefined')marked.setOptions({breaks:true,gfm:true});
 
 // ── STATE ──────────────────────────────────────────────
-let appData={convs:[],projects:[],memories:null,account:null,globalMemory:null};
+let appData={convs:[],projects:[],memories:null,account:null,globalMemory:null,reflections:null,loginHistory:null};
 let filteredConvs=[],listDisplay=[];
 let curConv=null,curMsgs=[];
 let curTab='convs',curMemSection='';
@@ -760,8 +868,15 @@ let ccConvCache=new Map();       // uuid -> 归一化后的 conv（供 openConv 
 let ccActiveConvUuid=null;
 
 // ── INDEXEDDB ──────────────────────────────────────────
+// v6.0: indexedDB.open 在无痕模式、站点数据被禁用或配额异常时，可能既不 success 也不 error，
+//        不加超时的话「保存到本地」和档案库会静默卡死，用户以为存上了其实什么都没发生。
+//        （常规的 file:// 直接双击打开是可以正常用的，已实测。）
+const IDB_MSG='浏览器没能打开本地数据库。常见原因：无痕/隐私模式、浏览器设置里禁用了站点数据，或存储空间不足。';
+function idbTimeout(p,ms){
+  return Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error(IDB_MSG)),ms||2000))]);
+}
 function openDB(){
-  return new Promise((res,rej)=>{
+  return idbTimeout(new Promise((res,rej)=>{
     const req=indexedDB.open('claude_viewer_v4',1);
     req.onupgradeneeded=e=>{
       const db=e.target.result;
@@ -769,7 +884,7 @@ function openDB(){
     };
     req.onsuccess=e=>res(e.target.result);
     req.onerror=()=>rej(req.error);
-  });
+  }));
 }
 async function dbSave(appDataObj){
   try{
@@ -777,7 +892,7 @@ async function dbSave(appDataObj){
     const tx=db.transaction('store','readwrite');
     tx.objectStore('store').put({key:'appData',data:appDataObj,savedAt:new Date().toISOString()});
     return new Promise((res,rej)=>{tx.oncomplete=res;tx.onerror=()=>rej(tx.error);});
-  }catch(e){console.error('DB save failed',e);}
+  }catch(e){console.error('DB save failed',e);throw e;} // v6.0: 交给调用方决定如何提示
 }
 async function dbLoad(){
   try{
@@ -821,8 +936,22 @@ const modalRememberWrap=$('modal-remember-wrap');
 
 // ── INIT ───────────────────────────────────────────────
 applyTheme();
-if(new URLSearchParams(location.search).get('demo'))loadDemo();
-else checkStartupCache();
+// v6.0: 推迟一轮再跑——档案库的 const/let 声明在脚本后半段，
+//        同步调用会踩 activeArc / arcGet 的暂时性死区
+setTimeout(()=>{
+  if(new URLSearchParams(location.search).get('demo'))loadDemo();
+  else arcRestore().catch(e=>{console.error(e);checkStartupCache();});
+},0);
+
+// v6.0: 上次看的是档案就直接恢复它，否则回落到旧的解析缓存
+async function arcRestore(){
+  const id=localStorage.getItem('cv_active_arc');
+  if(!id)return checkStartupCache();
+  if(!await arcProbe())return checkStartupCache();
+  const rec=await arcGet(id).catch(()=>null);
+  if(!rec){localStorage.removeItem('cv_active_arc');return checkStartupCache();}
+  await arcOpen(rec);
+}
 
 async function checkStartupCache(){
   if(cacheMode==='never')return; // user opted out
@@ -887,19 +1016,38 @@ $('dark-btn').addEventListener('click',()=>{
 fileInput.addEventListener('change',e=>{if(e.target.files.length)loadFiles(Array.from(e.target.files))});
 $('demo-btn').addEventListener('click',loadDemo);
 $('pick-label').addEventListener('click',e=>e.stopPropagation());
+// v6.0: 文件夹是主入口——点空白处也走它
+$('pick-dir').addEventListener('click',e=>{e.stopPropagation();openExportDir();});
 dropZone.addEventListener('click',e=>{
   if(e.target===dropZone||e.target.classList.contains('drop-icon')||
      e.target.classList.contains('drop-label')||e.target.classList.contains('drop-hint')||
      e.target.classList.contains('u-note')||e.target.classList.contains('tag'))
-    fileInput.click();
+    openExportDir();
 });
 dropZone.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.add('over')});
 dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('over'));
 dropZone.addEventListener('drop',e=>{
   e.preventDefault();dropZone.classList.remove('over');
+  // v6.0: 拖入的若是文件夹，dataTransfer.files 是空的，必须走 webkitGetAsEntry
+  const items=e.dataTransfer.items;
+  if(items&&items.length&&items[0].webkitGetAsEntry){
+    const ents=Array.from(items).map(it=>it.webkitGetAsEntry&&it.webkitGetAsEntry()).filter(Boolean);
+    if(ents.some(en=>en.isDirectory)){
+      showLoad('读取文件夹…');
+      (async()=>{
+        const out=[];for(const en of ents)await walkDropEntry(en,'',out);
+        const dir=ents.find(en=>en.isDirectory);
+        await loadExportFolder({name:dir?dir.name:'导出文件夹',files:out});
+      })().catch(err=>{hideLoad();alert('读取文件夹失败：'+((err&&err.message)||err));});
+      return;
+    }
+  }
   if(e.dataTransfer.files.length)loadFiles(Array.from(e.dataTransfer.files));
 });
-$('reset-btn').addEventListener('click',()=>{showUpload();fileInput.value='';resetState();resetCC();appMode='export';});
+$('reset-btn').addEventListener('click',()=>{
+  showUpload();fileInput.value='';resetState();resetCC();appMode='export';
+  arcLeave(); // v6.0: 离开档案态，收藏/标签切回本地
+});
 $('back-btn').addEventListener('click',()=>{showDetail(false);clearSearch()});
 // v5.6: Claude Code 入口 + 模式切换
 $('cc-btn').addEventListener('click',openClaudeCodeDir);
@@ -917,7 +1065,7 @@ document.querySelectorAll('#cc-tabs .tab').forEach(t=>t.addEventListener('click'
 $('m-back').addEventListener('click',()=>mainScreen.classList.remove('detail-open','conv-detail'));
 
 function resetState(){
-  appData={convs:[],projects:[],memories:null,account:null,globalMemory:null};
+  appData={convs:[],projects:[],memories:null,account:null,globalMemory:null,reflections:null,loginHistory:null};
   filteredConvs=[];listDisplay=[];curConv=null;curMsgs=[];
   filterFav=false;filterTag='';
 }
@@ -927,15 +1075,487 @@ function loadDemo(){
   resetState();
   appData.convs=DEMO_DATA.convs||[];
   appData.projects=DEMO_DATA.projects||[];
-  appData.memories=DEMO_DATA.memories||null;
   appData.account=DEMO_DATA.account||null;
+  // v6.0: 走 setMemories，让 memory_files 与真实导入走同一条路
+  setMemories(DEMO_DATA.memories||null);
+  appData.reflections=DEMO_DATA.reflections||null;
+  appData.loginHistory=DEMO_DATA.loginHistory||null;
   finalizeData(true);
 }
+
+// ══ v6.0: 导出文件夹导入 ══════════════════════════
+// Claude 新版导出 = manifest JSON + 多个分类 ZIP（conversations 还可能被切成多片），
+// 用户把整包文件放进一个文件夹，这里一次性吃掉。旧版单 ZIP 放在文件夹里同样能认。
+const CAT_RE=/^(conversations|projects|memories|feedback|light_metadata)-(\d+)(?: \(\d+\))?\.zip$/i;
+const CAT_CN={conversations:'对话',projects:'项目',memories:'记忆',feedback:'回顾',light_metadata:'账户信息'};
+const MANIFEST_RE=/(^|\/)manifest-[^/]*\.json$/i;
+const baseName=p=>String(p||'').split('/').pop();
+// v6.0: 本次导入的原始文件（供「存入档案库」复用，避免让用户再选一次）
+let pendingImport=null;
+function collectPending(entries,name){
+  const files=entries.filter(e=>/\.(zip|json|md|markdown)$/i.test(e.path))
+                     .map(e=>({name:e.path,blob:e.file}));
+  if(!files.length)return null;
+  return{name:name||null,files,kind:files.length===1&&/\.zip$/i.test(files[0].name)?'zip':'folder'};
+}
+
+// 拖放：webkitGetAsEntry 递归（readEntries 一次最多给 100 条，要循环取）
+function dropEntryFile(en){return new Promise(res=>en.file(f=>res(f),()=>res(null)));}
+function dropReadAll(reader){
+  return new Promise(res=>{const out=[];
+    const step=()=>reader.readEntries(es=>{if(!es.length)return res(out);out.push(...es);step();},()=>res(out));
+    step();});
+}
+async function walkDropEntry(en,pre,out){
+  const p=pre?pre+'/'+en.name:en.name;
+  if(en.isFile){const f=await dropEntryFile(en);if(f)out.push({path:p,file:f});}
+  else if(en.isDirectory){for(const c of await dropReadAll(en.createReader()))await walkDropEntry(c,p,out);}
+  return out;
+}
+
+// 选择器：安全上下文用 File System Access API，file:// 降级 <input webkitdirectory>（与 v5.6 同一套）
+async function fsaWalkDir(dir,pre,out){
+  for await(const [name,h] of dir.entries()){
+    const p=pre?pre+'/'+name:name;
+    if(h.kind==='directory')await fsaWalkDir(h,p,out);
+    else out.push({path:p,h});
+  }
+  return out;
+}
+async function pickExportDir(){
+  if(window.isSecureContext&&'showDirectoryPicker' in window){
+    const root=await window.showDirectoryPicker({mode:'read'});
+    const ents=await fsaWalkDir(root,'',[]);
+    const files=[];
+    for(const e of ents)files.push({path:e.path,file:await e.h.getFile()});
+    return{name:root.name||'导出文件夹',files};
+  }
+  const fs=await ccPickWebkitDir();
+  const first=(fs[0]&&fs[0].webkitRelativePath)||'';
+  return{name:first.split('/')[0]||'导出文件夹',
+    files:fs.map(f=>({path:(f.webkitRelativePath||f.name).replace(/\\/g,'/'),file:f}))};
+}
+async function openExportDir(){
+  let picked;
+  try{picked=await pickExportDir();}
+  catch(e){if(e&&e.name==='AbortError')return;alert('打开文件夹失败：'+((e&&e.message)||e));return;}
+  if(!picked.files.length){alert('这个文件夹里没有文件。');return;}
+  try{await loadExportFolder(picked);}
+  catch(err){hideLoad();alert('解析失败：'+((err&&err.message)||err));console.error(err);}
+}
+
+async function readManifest(entry){
+  try{
+    const m=JSON.parse(await readText(entry.file));
+    if(!Array.isArray(m.data_files))return null;
+    // export_url 是一次性下载链接且已失效，这里不读取、不展示、更不请求
+    return{path:entry.path,created_at:m.created_at||'',version:m.version||'',
+      files:m.data_files.map(d=>({filename:String(d.filename||''),category:String(d.category||''),part:d.part}))};
+  }catch{return null;}
+}
+// 同一个文件夹里可能堆了多次备份，让用户选一次
+function chooseManifest(list){
+  return new Promise(res=>{
+    modalTitle.textContent='📦 发现多份导出';
+    modalSub.textContent='这个文件夹里有 '+list.length+' 份 Claude 导出清单，选择要打开的一份：';
+    modalRememberWrap.style.display='none';modalNote.style.display='none';
+    modalBtns.innerHTML='';
+    const wrap=document.createElement('div');wrap.style.cssText='width:100%;max-height:210px;overflow:auto';
+    list.forEach(m=>{
+      const b=document.createElement('button');b.className='man-row';
+      b.innerHTML='<b>'+esc(m.created_at?fmtFull(m.created_at):baseName(m.path))+'</b>'+
+                  '<span>'+esc(baseName(m.path))+' · '+m.files.length+' 个文件</span>';
+      b.addEventListener('click',()=>{modalOverlay.classList.remove('show');res(m);});
+      wrap.appendChild(b);
+    });
+    modalBtns.appendChild(wrap);
+    const cancel=document.createElement('button');cancel.className='modal-btn';cancel.textContent='取消';
+    cancel.addEventListener('click',()=>{modalOverlay.classList.remove('show');res(null);});
+    modalBtns.appendChild(cancel);
+    modalOverlay.classList.add('show');
+  });
+}
+
+// manifest 只用来核对完整性，绝不用它决定怎么解析——
+// 解析永远按 ZIP 内部路径走 classifyJson，这样重命名、浏览器加 " (1)" 后缀都不受影响
+function checkExportSet(man,zipNames){
+  const have=new Set(zipNames.map(n=>n.toLowerCase()));
+  if(man){
+    const miss=man.files.filter(f=>!have.has(f.filename.toLowerCase()));
+    return miss.length?{strict:true,total:man.files.length,missing:miss.map(f=>f.filename)}:null;
+  }
+  const cats=new Set();
+  zipNames.forEach(n=>{const m=n.match(CAT_RE);if(m)cats.add(m[1].toLowerCase());});
+  if(!cats.size)return null; // 旧版单 ZIP，没有分类概念，不做校验
+  const miss=['conversations','projects','memories','light_metadata','feedback'].filter(c=>!cats.has(c));
+  return miss.length?{strict:false,missing:miss.map(c=>CAT_CN[c]+'（'+c+'-xxx.zip）')}:null;
+}
+function warnIncomplete(w){
+  modalTitle.textContent='⚠️ 导出包可能不完整';
+  modalSub.textContent=w.strict
+    ? '清单里共 '+w.total+' 个文件，有 '+w.missing.length+' 个没在文件夹里找到。'
+    : '按文件名推断，这几类数据没有找到。';
+  modalRememberWrap.style.display='none';
+  modalNote.style.display='block';
+  modalNote.textContent=(w.strict
+    ? '缺少：'+w.missing.join('、')+'\n\n'
+    : '缺少：'+w.missing.join('、')+'\n\n')+
+    '已导入的部分可以正常查看。注意：manifest 里的下载链接是一次性的，缺的文件无法重新下载，需要在 Claude 设置里重新导出。';
+  modalNote.style.whiteSpace='pre-wrap';
+  modalBtns.innerHTML='';
+  const ok=document.createElement('button');ok.className='modal-btn primary';ok.textContent='知道了';
+  ok.addEventListener('click',()=>{modalOverlay.classList.remove('show');modalNote.style.whiteSpace='';});
+  modalBtns.appendChild(ok);
+  modalOverlay.classList.add('show');
+}
+
+async function loadExportFolder(picked){
+  showLoad('扫描文件夹…');
+  const files=picked.files;
+  // 1) manifest（可选）：有就精确核对分片，没有就降级为按类别粗校验
+  const mans=[];
+  for(const f of files)if(MANIFEST_RE.test(f.path)){const m=await readManifest(f);if(m)mans.push(m);}
+  let man=null;
+  if(mans.length===1)man=mans[0];
+  else if(mans.length>1){
+    mans.sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
+    hideLoad();
+    man=await chooseManifest(mans);
+    if(!man)return;
+    showLoad('解析中…');
+  }
+  // 2) 挑 ZIP。manifest 点名的文件若确实都在，就只认这一套，避免把别次备份混进来
+  let zips=files.filter(f=>/\.zip$/i.test(f.path));
+  if(man){
+    const want=new Set(man.files.map(f=>f.filename.toLowerCase()));
+    const hit=zips.filter(z=>want.has(baseName(z.path).toLowerCase()));
+    if(hit.length)zips=hit;
+  }
+  if(!zips.length&&!files.some(f=>/\.(json|md|markdown)$/i.test(f.path)&&!MANIFEST_RE.test(f.path))){
+    hideLoad();alert('这个文件夹里没有找到 .zip 导出包或 .json 数据文件。');return;
+  }
+  // 3) 一个文件夹 = 一次完整导出，先清空，避免和上一次的数据混在一起
+  resetState();resetCC();appMode='export';
+  let i=0;
+  for(const z of zips){
+    loadingMsg.textContent='解析 ('+(++i)+'/'+zips.length+') '+baseName(z.path)+'…';
+    await parseZip(z.file);
+  }
+  // 4) 文件夹里散落的 json / md（用户自己解压过，或额外放的记忆文件）
+  for(const f of files){
+    if(/\.zip$/i.test(f.path)||MANIFEST_RE.test(f.path))continue;
+    if(/\.json$/i.test(f.path)){
+      try{classifyJson(baseName(f.path),JSON.parse(await readText(f.file)),f.path);}catch{}
+    }else if(/\.(md|markdown)$/i.test(f.path)){
+      classifyMd(baseName(f.path),await readText(f.file));
+    }
+  }
+  pendingImport=collectPending(files,picked.name); // v6.0
+  const warn=checkExportSet(man,zips.map(z=>baseName(z.path)));
+  finalizeData();
+  if(warn)setTimeout(()=>warnIncomplete(warn),50);
+}
+
+// ══ v6.0: 档案库 ═══════════════════════════════
+// 一份档案 = 一次完整导出（manifest + 全部 ZIP）的原始字节。
+// 新版导出天生是多个 ZIP，所以粒度必须是「一次导出」而不是「一个 ZIP」。
+// 与旧的解析缓存（claude_viewer_v4）并存：那边存解析结果，这边存原件。
+const ARC_DB='claude_viewer_archives_v1';
+let activeArc=null,arcRecords=[],arcBusy=false,arcSaveT=null;
+const arcPanel=$('arc-panel');
+
+function arcOpenDB(){
+  return idbTimeout(new Promise((res,rej)=>{
+    const req=indexedDB.open(ARC_DB,1);
+    req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains('archives'))req.result.createObjectStore('archives',{keyPath:'id'});};
+    req.onsuccess=()=>res(req.result);
+    req.onerror=()=>rej(req.error);
+    req.onblocked=()=>rej(new Error('另一个窗口正在更新档案库，请先关闭它'));
+  }));
+}
+// 档案库要存原始字节，没有 IndexedDB 就整个不可用——先探一次并记住结果
+let arcOK=null;
+async function arcProbe(){
+  if(arcOK!==null)return arcOK;
+  try{const db=await arcOpenDB();if(db.close)db.close();arcOK=true;}
+  catch{arcOK=false;}
+  return arcOK;
+}
+function arcTx(mode,fn){
+  return arcOpenDB().then(db=>new Promise((res,rej)=>{
+    const tx=db.transaction('archives',mode),req=fn(tx.objectStore('archives'));
+    let out;if(req)req.onsuccess=()=>{out=req.result;};
+    tx.oncomplete=()=>res(out);tx.onerror=()=>rej(tx.error);tx.onabort=()=>rej(tx.error);
+  }));
+}
+const arcAll=()=>arcTx('readonly',st=>st.getAll());
+const arcGet=id=>arcTx('readonly',st=>st.get(id));
+const arcPut=rec=>arcTx('readwrite',st=>st.put(rec));
+const arcDel=id=>arcTx('readwrite',st=>st.delete(id));
+
+// 收藏 / 标签：档案态写进档案，否则走 localStorage（两者互不污染）
+function annLoad(){
+  if(activeArc){
+    const md=activeArc.metadata||{};
+    favorites=new Set(md.favorites||[]);tags=JSON.parse(JSON.stringify(md.tags||{}));
+  }else{
+    favorites=new Set(JSON.parse(localStorage.getItem('cv_favs')||'[]'));
+    tags=JSON.parse(localStorage.getItem('cv_tags')||'{}');
+  }
+}
+function annSave(){
+  if(activeArc){
+    activeArc.metadata={favorites:[...favorites],tags};
+    clearTimeout(arcSaveT);
+    const rec=activeArc;
+    arcSaveT=setTimeout(()=>{arcPut(rec).catch(e=>console.error('archive metadata save failed',e));},300);
+  }else{
+    localStorage.setItem('cv_favs',JSON.stringify([...favorites]));
+    localStorage.setItem('cv_tags',JSON.stringify(tags));
+  }
+}
+function arcLeave(){
+  if(!activeArc)return;
+  activeArc=null;localStorage.removeItem('cv_active_arc');annLoad();updateCacheBar();
+}
+
+// 校验：整套里至少要有一个 conversations 分片（而不是每个 ZIP 都要有）
+async function arcScan(files){
+  let hasConv=false,man=null;const cats=new Set();
+  for(const f of files){
+    const bn=baseName(f.name);
+    if(/^manifest-.*\.json$/i.test(bn)){
+      try{const m=JSON.parse(await f.blob.text());if(Array.isArray(m.data_files))man=m;}catch{}
+      continue;
+    }
+    if(/\.json$/i.test(bn)&&bn==='conversations.json'){hasConv=true;continue;}
+    if(!/\.zip$/i.test(bn))continue;
+    const cm=bn.match(CAT_RE);if(cm)cats.add(cm[1].toLowerCase());
+    let z;
+    try{z=await JSZip.loadAsync(f.blob,{checkCRC32:true});}
+    catch(e){throw new Error(bn+'：无法读取，可能下载损坏（'+((e&&e.message)||e)+'）');}
+    if(Object.keys(z.files).some(n=>n.split('/').pop()==='conversations.json'))hasConv=true;
+  }
+  if(!hasConv)throw new Error('这一套里没有找到 conversations 数据，不像是 Claude 导出包');
+  return{man,cats};
+}
+
+function arcSetStatus(t){$('arc-status').textContent=t||'';}
+function arcLock(v){arcBusy=v;arcPanel.querySelectorAll('button').forEach(b=>b.disabled=v);}
+async function arcRun(fn){
+  if(arcBusy)return;
+  arcLock(true);
+  try{return await fn();}
+  catch(e){console.error(e);arcSetStatus('⚠️ '+((e&&e.message)||e));}
+  finally{arcLock(false);hideLoad();}
+}
+
+async function arcAdd(name,files,kind){
+  arcSetStatus('校验中…');
+  const {man}=await arcScan(files);
+  if(!name){ // v6.0: 没给名字就用导出时间，比「导入的 5 个文件」有意义
+    name=(man&&man.created_at)?('Claude 导出 '+fmtDate(man.created_at))
+      :(files.length===1?baseName(files[0].name).replace(/\.zip$/i,'')
+        :'Claude 导出 '+fmtDate(new Date().toISOString()));
+  }
+  const size=files.reduce((n,f)=>n+(f.blob.size||0),0);
+  const rec={
+    id:(Date.now().toString(36)+Math.random().toString(36).slice(2,8)),
+    name:name||'未命名导出',kind:kind||'folder',
+    createdAt:(man&&man.created_at)||'',
+    addedAt:new Date().toISOString(),
+    size,files,metadata:{favorites:[],tags:{}}
+  };
+  await arcPut(rec);
+  await arcRefresh();
+  arcSetStatus('✅ 已加入档案库：'+rec.name);
+  return rec;
+}
+
+// v6.0: 数据已经解析好了，这里只把原始字节收进档案库并切到档案态——不重新解析一遍
+async function arcAdoptPending(){
+  const p=pendingImport;
+  if(!p||!p.files.length)throw new Error('没有可存入的原始文件');
+  showLoad('存入档案库…');
+  const rec=await arcAdd(p.name,p.files,p.kind);
+  // 继承当前的收藏与标签，避免「一入库收藏就没了」
+  rec.metadata={favorites:[...favorites],tags};
+  await arcPut(rec);
+  activeArc=rec;localStorage.setItem('cv_active_arc',rec.id);
+  isCached=false;updateCacheBar();
+  await arcRefresh();await arcRenderStorage();
+  hideLoad();
+  arcSetStatus('✅ 已存入档案库：'+rec.name+'（原始文件已完整保留，可随时「↓ 导出整套」取回）');
+}
+
+async function arcOpen(rec){
+  showLoad('打开档案…');
+  resetState();resetCC();appMode='export';
+  const zips=rec.files.filter(f=>/\.zip$/i.test(baseName(f.name)));
+  let i=0;
+  for(const f of zips){
+    loadingMsg.textContent='解析 ('+(++i)+'/'+zips.length+') '+baseName(f.name)+'…';
+    await parseZip(f.blob);
+  }
+  for(const f of rec.files){
+    const bn=baseName(f.name);
+    if(/\.zip$/i.test(bn)||/^manifest-.*\.json$/i.test(bn))continue;
+    if(/\.json$/i.test(bn)){try{classifyJson(bn,JSON.parse(await f.blob.text()),f.name);}catch{}}
+    else if(/\.(md|markdown)$/i.test(bn))classifyMd(bn,await f.blob.text());
+  }
+  activeArc=rec;localStorage.setItem('cv_active_arc',rec.id);
+  annLoad();
+  isCached=false;
+  finalizeData(true); // fromCache=true：档案已是原件，不再问要不要缓存
+  arcHide();
+}
+
+async function arcExportSet(rec){
+  showLoad('打包档案…');
+  const zip=new JSZip();
+  for(const f of rec.files)zip.file(baseName(f.name),f.blob,{compression:'STORE'}); // 内层已压缩，不再二次压缩
+  const blob=await zip.generateAsync({type:'blob',compression:'STORE'});
+  hideLoad();
+  download(blob,(rec.name||'claude-export').replace(/[\\/:*?"<>|]/g,'_')+'.zip','application/zip');
+}
+function arcExportOne(rec,f){download(f.blob,baseName(f.name),'application/octet-stream');}
+
+async function arcRefresh(){
+  arcRecords=(await arcAll())||[];
+  arcRecords.sort((a,b)=>new Date(b.createdAt||b.addedAt||0)-new Date(a.createdAt||a.addedAt||0));
+  arcRender();
+  return arcRecords;
+}
+
+function arcRender(){
+  const box=$('arc-list');box.innerHTML='';
+  if(!arcRecords.length){
+    box.innerHTML='<div class="arc-empty">还没有档案。点上面「添加导出文件夹」，把一次导出整包存进来。</div>';
+    return;
+  }
+  const frag=document.createDocumentFragment();
+  arcRecords.forEach(rec=>{
+    const on=activeArc&&activeArc.id===rec.id;
+    const row=document.createElement('div');row.className='arc-row'+(on?' on':'');
+    const nz=rec.files.filter(f=>/\.zip$/i.test(baseName(f.name))).length;
+    const meta=[rec.files.length+' 个文件',nz?nz+' 个 ZIP':'',formatBytes(rec.size||0),
+      rec.createdAt?'导出于 '+fmtFull(rec.createdAt):'加入于 '+fmtFull(rec.addedAt||'')].filter(Boolean).join(' · ');
+    row.innerHTML='<div class="arc-name">'+esc(rec.name)+(on?'<span class="arc-badge">正在查看</span>':'')+'</div>'+
+                  '<div class="arc-meta">'+esc(meta)+'</div>';
+    const btns=document.createElement('div');btns.className='arc-btns';
+    const mk=(txt,cls,fn)=>{const b=document.createElement('button');b.className='arc-btn'+(cls?' '+cls:'');
+      b.textContent=txt;b.addEventListener('click',fn);btns.appendChild(b);return b;};
+    mk(on?'重新载入':'打开','',()=>arcRun(()=>arcOpen(rec)));
+    const inp=document.createElement('input');inp.className='arc-rename';inp.value=rec.name;inp.maxLength=80;
+    inp.setAttribute('aria-label','档案名称');btns.appendChild(inp);
+    mk('重命名','',()=>arcRun(async()=>{
+      const v=inp.value.trim();if(!v)return;
+      rec.name=v;await arcPut(rec);
+      if(activeArc&&activeArc.id===rec.id){activeArc.name=v;updateCacheBar();}
+      await arcRefresh();arcSetStatus('已重命名为：'+v);
+    }));
+    mk('↓ 导出整套','',()=>arcRun(()=>arcExportSet(rec)));
+    mk('移除','danger',()=>arcRun(async()=>{
+      if(!confirm('从档案库移除「'+rec.name+'」？\n\n这会删除它的原始文件副本以及该档案下的收藏和标签。电脑上的原文件不受影响。'))return;
+      await arcDel(rec.id);
+      if(activeArc&&activeArc.id===rec.id){arcLeave();resetState();finalizeData(true);showUpload();}
+      await arcRefresh();await arcRenderStorage();arcSetStatus('已移除');
+    }));
+    row.appendChild(btns);
+    const fl=document.createElement('div');fl.className='arc-files';
+    fl.appendChild(Object.assign(document.createElement('span'),{textContent:'取出原件：'}));
+    rec.files.forEach(f=>{
+      const b=document.createElement('button');b.className='arc-file';b.textContent=baseName(f.name);
+      b.addEventListener('click',()=>arcExportOne(rec,f));fl.appendChild(b);
+    });
+    row.appendChild(fl);
+    frag.appendChild(row);
+  });
+  box.appendChild(frag);
+}
+
+// v6.0: 申请持久化存储——浏览器在磁盘吃紧时不会自动清掉本站数据。
+//        （用户主动「清除浏览数据」仍会删，这一点没有任何网页能规避，只能靠留住原始文件。）
+async function arcStorageInfo(){
+  const out={supported:false,persisted:false,usage:0,quota:0};
+  try{
+    if(!navigator.storage)return out;
+    out.supported=true;
+    if(navigator.storage.persisted)out.persisted=await navigator.storage.persisted();
+    if(!out.persisted&&navigator.storage.persist)out.persisted=await navigator.storage.persist();
+    if(navigator.storage.estimate){const e=await navigator.storage.estimate();out.usage=e.usage||0;out.quota=e.quota||0;}
+  }catch{}
+  return out;
+}
+async function arcRenderStorage(){
+  const box=$('arc-storage');if(!box)return;
+  const st=await arcStorageInfo();
+  const used=arcRecords.reduce((n,r)=>n+(r.size||0),0);
+  const parts=[];
+  parts.push('档案库占用 <b>'+esc(formatBytes(used))+'</b>（'+arcRecords.length+' 份）');
+  if(st.quota)parts.push('本站可用配额约 <b>'+esc(formatBytes(st.quota))+'</b>');
+  parts.push(st.persisted
+    ? '<span class="ok">✅ 已获持久化存储</span>——磁盘紧张时浏览器不会自动清理本站数据'
+    : '<span class="warn">⚠️ 未获持久化存储</span>——磁盘紧张时浏览器可能自动清理本站数据');
+  box.innerHTML=parts.join('<br>')+
+    '<br><span class="warn">无论如何，手动「清除浏览数据」都会清空档案库。原始导出文件请留在磁盘上。</span>';
+}
+
+function arcShow(){
+  arcPanel.classList.add('show');arcSetStatus('');
+  $('arc-list').innerHTML='<div class="arc-empty">读取档案库…</div>';
+  arcRun(async()=>{
+    if(!await arcProbe()){
+      arcSetStatus('');
+      $('arc-list').innerHTML='<div class="arc-empty">\u26a0\ufe0f 档案库当前不可用<br><br>'+
+        esc(IDB_MSG)+'<br><br>其余功能（导入、查看、导出）不受影响。</div>';
+      ['arc-add-dir','arc-add-zip'].forEach(id=>{const b=$(id);if(b)b.style.display='none';});
+      return;
+    }
+    await arcRefresh();
+    await arcRenderStorage();
+  });
+}
+function arcHide(){arcPanel.classList.remove('show');}
+
+$('arc-btn').addEventListener('click',arcShow);
+$('arc-open-btn').addEventListener('click',arcShow);
+$('arc-close').addEventListener('click',arcHide);
+arcPanel.addEventListener('click',e=>{if(e.target===arcPanel)arcHide();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&arcPanel.classList.contains('show'))arcHide();});
+$('arc-add-dir').addEventListener('click',()=>arcRun(async()=>{
+  let picked;
+  try{picked=await pickExportDir();}
+  catch(e){if(e&&e.name==='AbortError')return;throw e;}
+  const files=[];
+  for(const f of picked.files){
+    if(!/\.(zip|json|md|markdown)$/i.test(f.path))continue;
+    files.push({name:f.path,blob:f.file});
+  }
+  if(!files.length)throw new Error('这个文件夹里没有 .zip / .json 文件');
+  const rec=await arcAdd(picked.name,files,'folder');
+  await arcOpen(rec);
+}));
+$('arc-add-zip').addEventListener('click',()=>$('arc-zip-input').click());
+$('arc-zip-input').addEventListener('change',e=>{
+  const fs=Array.from(e.target.files||[]);e.target.value='';
+  if(!fs.length)return;
+  arcRun(async()=>{
+    const files=fs.map(f=>({name:f.name,blob:f}));
+    const rec=await arcAdd(null,files,fs.length===1?'zip':'folder');
+    await arcOpen(rec);
+  });
+});
+$('arc-temp').addEventListener('click',()=>{
+  arcLeave();arcHide();resetState();resetCC();appMode='export';showUpload();
+});
 
 // ── LOAD FILES ─────────────────────────────────────────
 async function loadFiles(files){
   showLoad('解析文件中…');
   try{
+    // v6.0: 记下原始文件，导入成功后可一键存进档案库（原始字节，不是解析结果）
+    pendingImport=collectPending(files.map(f=>({path:f.name,file:f})),null);
     for(const f of files){
       if(f.name.endsWith('.zip')||f.type.includes('zip')) await parseZip(f);
       else if(f.name.endsWith('.json')){
@@ -949,7 +1569,7 @@ async function loadFiles(files){
 }
 
 async function parseZip(file){
-  const zip=await JSZip.loadAsync(file);
+  const zip=await JSZip.loadAsync(file,{checkCRC32:true}); // v6.0: 校验完整性，检出下载损坏
   const zfiles=Object.values(zip.files).filter(f=>!f.dir);
   loadingMsg.textContent='解析 ZIP（'+zfiles.length+' 个文件）…';
   for(const zf of zfiles){
@@ -960,17 +1580,35 @@ async function parseZip(file){
 }
 
 function classifyJson(name,data,fullPath){
+  const p=(fullPath||'').replace(/\\/g,'/');
+  const isObj=data&&typeof data==='object'&&!Array.isArray(data);
   if(name==='conversations.json'&&Array.isArray(data))appData.convs=[...appData.convs,...data];
   else if(name==='users.json'&&Array.isArray(data))appData.account=data[0]||null;
-  else if(name==='memories.json'&&Array.isArray(data))appData.memories=data[0]||null;
-  else if((fullPath&&fullPath.includes('projects/')||!fullPath)&&name.match(/^[0-9a-f-]+\.json$/i)
+  // v6.0: 记忆有两种布局——旧版根目录 memories.json（数组），新版 memories/{account_uuid}.json（对象）
+  else if(name==='memories.json'&&Array.isArray(data))setMemories(data[0]);
+  else if(p.includes('memories/')&&isObj
+    &&(data.conversations_memory!==undefined||data.project_memories!==undefined))setMemories(data);
+  // v6.0: 官方回顾（feedback-000.zip → reflections/{account_uuid}.json）
+  else if(p.includes('reflections/')&&isObj&&Array.isArray(data.reflections))appData.reflections=data;
+  // v6.0: 登录历史（light_metadata-000.zip）
+  else if(name==='login_history.json'&&isObj&&Array.isArray(data.login_events))appData.loginHistory=data.login_events;
+  else if((p.includes('projects/')||!fullPath)&&name.match(/^[0-9a-f-]+\.json$/i)
     &&typeof data==='object'&&data.uuid&&data.prompt_template!==undefined)
     appData.projects.push(data);
 }
 
+// v6.0: memory_files 从旧版单 ZIP 时代就在导出里，此前一直没被读取——并入全局记忆
+function setMemories(m){
+  if(!m)return;
+  appData.memories=m;
+  (m.memory_files||[]).forEach(f=>classifyMd((f.path||'').replace(/^\//,'')||'memory.md',f.content||''));
+}
+
 function classifyMd(filename,text){
   if(!appData.globalMemory)appData.globalMemory=[];
-  appData.globalMemory.push({filename,text});
+  const i=appData.globalMemory.findIndex(m=>m.filename===filename);
+  if(i>=0)appData.globalMemory[i]={filename,text}; // v6.0: 同名覆盖，避免重复导入堆叠
+  else appData.globalMemory.push({filename,text});
 }
 
 function readText(file){
@@ -983,6 +1621,12 @@ function readText(file){
 }
 
 function finalizeData(fromCache){
+  // v6.0: 分片导出可能分批导入、也可能重复导入同一份，按 uuid 去重（保留先出现的）
+  const cseen=new Set();
+  appData.convs=appData.convs.filter(c=>{const u=c&&c.uuid;if(!u)return true;if(cseen.has(u))return false;cseen.add(u);return true;});
+  // v6.0: 旧版本 IndexedDB 缓存没有这些字段，补齐避免 undefined
+  if(appData.reflections===undefined)appData.reflections=null;
+  if(appData.loginHistory===undefined)appData.loginHistory=null;
   const seen=new Set();
   appData.projects=appData.projects.filter(p=>{if(seen.has(p.uuid))return false;seen.add(p.uuid);return true;});
   filteredConvs=appData.convs
@@ -1005,13 +1649,13 @@ function finalizeData(fromCache){
   if(appData.globalMemory&&appData.globalMemory.length)parts.push(appData.globalMemory.length+'个记忆文件');
   if(appData.account)parts.push(appData.account.full_name||appData.account.email_address||'');
   exportSubText=parts.join(' · ')||'—';
-  shSub.textContent=exportSubText;
+  shSub.textContent=exportSubText;shSub.title=exportSubText; // v6.0: 单行省略后靠 title 看全
   appMode='export';
   setTab('convs');
   hideLoad();showMain();showDetail(false);
   updateCacheBar();
   // Fresh import (not from cache): decide whether to prompt for saving
-  if(!fromCache){
+  if(!fromCache&&!activeArc){ // v6.0: 档案态不再问是否缓存
     if(cacheMode==='always'){doSaveCache();}
     else if(cacheMode==='never'){/* stay in memory */}
     else{showSavePrompt();}
@@ -1019,36 +1663,56 @@ function finalizeData(fromCache){
 }
 
 function showSavePrompt(){
+  // v6.0: 刚导入的这一份如果带着原始文件，就直接给「存入档案库」，
+  //        否则用户还得再去档案库重新选一次同一批文件，很不合理
+  const canArc=!!(pendingImport&&pendingImport.files.length&&arcOK!==false);
   modalTitle.textContent='✅ 数据导入成功';
-  modalSub.textContent=`已加载 ${filteredConvs.length} 条对话。是否在此设备上保存数据？下次打开无需重新导入。`;
-  modalRememberWrap.style.display='flex';
+  modalSub.textContent=`已加载 ${filteredConvs.length} 条对话。要在这台设备上保存吗？`;
+  modalRememberWrap.style.display=canArc?'none':'flex';
   modalRemember.checked=false;
   modalNote.style.display='block';
-  modalNote.textContent='💡 数据将保存在此设备的浏览器本地（仅本机可见，不会上传）。可随时在左下角点击「清除」删除。';
+  modalNote.style.whiteSpace='pre-wrap';
+  modalNote.textContent=canArc
+    ? '📚 存入档案库＝保留这次导出的原始文件，可随时原样取出、与其他备份来回切换。\n\u26a0\ufe0f 无论选哪种，都请把原始导出文件留在磁盘上——清理浏览器数据会一并清空浏览器内的存储。'
+    : '💡 数据将保存在此设备的浏览器本地（仅本机可见，不会上传）。可随时在左下角点击「清除」删除。';
   modalBtns.innerHTML='';
-  const b1=document.createElement('button');b1.className='modal-btn primary';b1.textContent='💾 保存到本地';
-  b1.addEventListener('click',()=>{
+  const mk=(txt,cls,fn)=>{const b=document.createElement('button');b.className='modal-btn'+(cls?' '+cls:'');
+    b.textContent=txt;b.addEventListener('click',fn);modalBtns.appendChild(b);return b;};
+  if(canArc)mk('📚 存入档案库','primary',()=>{
+    modalOverlay.classList.remove('show');
+    arcRun(()=>arcAdoptPending()).then(()=>{});
+  });
+  mk(canArc?'💾 只存解析结果':'💾 保存到本地',canArc?'':'primary',()=>{
     if(modalRemember.checked){cacheMode='always';localStorage.setItem('cv_cachemode','always');}
     modalOverlay.classList.remove('show');doSaveCache();
   });
-  const b2=document.createElement('button');b2.className='modal-btn';b2.textContent='🔒 仅本次使用';
-  b2.addEventListener('click',()=>{
+  mk('🔒 仅本次使用','',()=>{
     if(modalRemember.checked){cacheMode='never';localStorage.setItem('cv_cachemode','never');}
     modalOverlay.classList.remove('show');isCached=false;updateCacheBar();
   });
-  modalBtns.appendChild(b1);modalBtns.appendChild(b2);
   modalOverlay.classList.add('show');
 }
 
-function doSaveCache(){
-  isCached=true;updateCacheBar();
-  // async, non-blocking
-  setTimeout(()=>{dbSave(appData);},400);
+// v6.0: 原来 isCached=true 抢在写入之前置位、且 setTimeout 里静默失败，
+//        保存失败用户完全不知情，以为已经存上了
+async function doSaveCache(){
+  if(activeArc)return; // v6.0: 档案本身就是持久的，不必再写解析缓存
+  const snapshot=appData;
+  try{
+    await dbSave(snapshot);
+    if(appData===snapshot){isCached=true;updateCacheBar();}
+  }catch(e){
+    isCached=false;updateCacheBar();
+    alert('保存到本地失败：'+((e&&e.message)||e));
+  }
 }
 
 function updateCacheBar(){
   cacheBar.style.display='flex';
-  if(isCached){
+  if(activeArc){ // v6.0
+    cacheStatus.textContent='📦 档案 · '+activeArc.name;
+    cacheClearBtn.style.display='none';
+  } else if(isCached){
     cacheStatus.textContent='💾 本地已缓存';
     cacheClearBtn.style.display='';
   } else {
@@ -1073,7 +1737,7 @@ function setTab(id){
   if(id==='memories')curMemSection='';
   renderSidebarForTab();showDetail(false);
   // v5.4: 内容主导型 Tab（内容在右侧面板、侧栏无列表）→ 移动端直接进面板
-  if(id==='stats'||id==='account'||id==='search')mainScreen.classList.add('detail-open');
+  if(id==='stats'||id==='account'||id==='search'||id==='reflect')mainScreen.classList.add('detail-open');
 }
 
 sbSearch.addEventListener('input',()=>{
@@ -1092,6 +1756,7 @@ function renderSidebarForTab(){
   else if(id==='stats')renderStats();
   else if(id==='projects')renderProjectsList();
   else if(id==='memories')renderMemoriesList();
+  else if(id==='reflect')renderReflect(); // v6.0
   else renderAccountList();
 }
 
@@ -1205,14 +1870,14 @@ function renderConvList(){
 function toggleFav(uuid,card,btn){
   if(favorites.has(uuid)){favorites.delete(uuid);btn.textContent='☆';btn.classList.remove('on');card.classList.remove('fav-card');}
   else{favorites.add(uuid);btn.textContent='⭐';btn.classList.add('on');card.classList.add('fav-card');}
-  localStorage.setItem('cv_favs',JSON.stringify([...favorites]));
+  annSave(); // v6.0: 档案态写进档案，否则仍走 localStorage
 }
 
 function removeTag(uuid,tag){
   if(!tags[uuid])return;
   tags[uuid]=tags[uuid].filter(t=>t!==tag);
   if(!tags[uuid].length)delete tags[uuid];
-  localStorage.setItem('cv_tags',JSON.stringify(tags));
+  annSave();
 }
 
 function showTagInput(uuid,ctags,addT){
@@ -1224,7 +1889,7 @@ function showTagInput(uuid,ctags,addT){
     const v=inp.value.trim();
     if(v){
       if(!tags[uuid])tags[uuid]=[];
-      if(!tags[uuid].includes(v)){tags[uuid].push(v);localStorage.setItem('cv_tags',JSON.stringify(tags));}
+      if(!tags[uuid].includes(v)){tags[uuid].push(v);annSave();}
     }
     wrap.remove();renderConvList();
   };
@@ -1394,7 +2059,7 @@ function diagHtml(){
       <tr><th>对话名称</th><th>空/总</th><th title="Claude 连续多少轮没有回复——即对话看起来「只剩你一个人说话」的长度">连续无回复</th></tr>
       ${d.affected.slice(0,10).map(a=>`<tr>
         <td class="tc-name" title="${esc(a.uuid)}" style="cursor:pointer"
-          onclick="openConvById('${a.uuid}')">${esc(a.name)}${a.allEmpty?' <span style="color:var(--t3)">（全空）</span>':''}</td>
+          data-open-conv="${esc(a.uuid)}">${esc(a.name)}${a.allEmpty?' <span style="color:var(--t3)">（全空）</span>':''}</td>
         <td>${a.empty}/${a.total}</td><td>${a.run}</td>
       </tr>`).join('')}
     </table>
@@ -1402,7 +2067,7 @@ function diagHtml(){
       按月分布：${mos.map(m=>`${m} <b>${d.byMonth[m].e}</b>/${d.byMonth[m].t}`).join('　·　')}
       <br>集中在个别月份说明是平台阶段性故障，而非你的数据或本工具的问题。</div>`:''}
     <button id="diag-copy" class="action-btn" style="margin-top:10px;opacity:1"
-      onclick="copyDiag()">📋 复制体检报告</button>
+      data-copy-diag>📋 复制体检报告</button>
   </div>`;
 }
 
@@ -1468,7 +2133,7 @@ function renderStats(){
         <tr><th>对话名称</th><th>消息数</th><th>思考块</th><th>最后活跃</th></tr>
         ${topConvs.map(c=>`<tr>
           <td class="tc-name" title="${esc(c.name)}" style="cursor:pointer"
-            onclick="openConvById('${c.uuid}')">${esc(c.name)}</td>
+            data-open-conv="${esc(c.uuid)}">${esc(c.name)}</td>
           <td>${c.msgCount}</td><td>${c.thinkCount}</td><td>${fmtDate(c.lastActive)}</td>
         </tr>`).join('')}
       </table>
@@ -1647,8 +2312,8 @@ function renderMemoriesList(){
     scroll.insertAdjacentHTML('beforeend','<div class="empty-hint" style="font-size:12px">暂无记忆数据</div>');
     staticPanel.innerHTML=`<div class="panel-title">🧠 记忆</div>
       <div class="section-card"><div class="sc-body">
-      <strong>个人记忆</strong>（Claude 跨对话记住的关于你的信息）就在导出包的 <code>memories.json</code> 里，导入 ZIP 后会自动显示在这里；本次数据未包含。<br><br>
-      你也可以点击左侧「＋ 导入全局记忆 .md」，导入额外的 <code>.md</code> 记忆文件。
+<strong>个人记忆</strong>（Claude 跨对话记住的关于你的信息）就在导出包里——新版在 <code>memories/{uuid}.json</code>，旧版在 <code>memories.json</code>，导入后会自动显示在这里；本次数据未包含。<br><br>
+      导出包里的 <strong>记忆文件</strong>（<code>memory_files</code>）也会自动列出，无需手工导入。你仍可以点击左侧「＋ 导入全局记忆 .md」，补充自己的 <code>.md</code> 文件。
       ${pmCount?`<br><br>💡 你的数据包含 ${pmCount} 个<strong>项目记忆</strong>，已归入 <strong>📁 项目</strong> 标签页对应项目下查看。`:''}
       </div></div>`;
     return;
@@ -1675,14 +2340,14 @@ function renderMemoryPanel(item){
   if(item.type==='personal'){
     const txt=(appData.memories&&appData.memories.conversations_memory)||'';
     staticPanel.innerHTML=`<div class="panel-title">🧠 个人记忆</div>
-      <div class="section-card"><div class="sc-body" style="font-size:12px;color:var(--t3);margin-bottom:8px">Claude 跨对话记住的关于你的信息（来自导出 <code>memories.json</code>）</div>
+      <div class="section-card"><div class="sc-body" style="font-size:12px;color:var(--t3);margin-bottom:8px">Claude 跨对话记住的关于你的信息（新版导出 <code>memories/{uuid}.json</code>，旧版 <code>memories.json</code>）</div>
       <div class="mem-md">${marked.parse(txt)}</div></div>`;
     return;
   }
   const m=appData.globalMemory[item.idx];
   staticPanel.innerHTML=`<div class="panel-title" style="display:flex;align-items:center;justify-content:space-between">
     <span>🌐 ${esc(m.filename.replace(/\.md$/i,''))}</span>
-    <button class="exp-btn" onclick="exportMemMd(${item.idx})" style="font-size:11px">↓ 导出</button>
+    <button class="exp-btn" data-export-memory="${item.idx}" style="font-size:11px">↓ 导出</button>
   </div><div class="section-card"><div class="mem-md">${marked.parse(m.text)}</div></div>`;
 }
 
@@ -1714,7 +2379,97 @@ function renderAccountList(){
       <span class="sc-k">总消息数</span><span class="sc-v">${filteredConvs.reduce((s,c)=>s+c.msgCount,0)}</span>
       <span class="sc-k">收藏对话</span><span class="sc-v">${favorites.size}</span>
       <span class="sc-k">记忆数据</span><span class="sc-v">${appData.memories?'✅':'—'}</span>
-    </div></div>`;
+      <span class="sc-k">记忆文件</span><span class="sc-v">${(appData.globalMemory||[]).length||'—'}</span>
+      <span class="sc-k">Claude 回顾</span><span class="sc-v">${appData.reflections?(appData.reflections.reflections||[]).length+' 期':'—'}</span>
+    </div></div>
+    ${renderLoginHistory()}`;
+}
+
+// v6.0: 登录记录来自新版导出的 light_metadata-000.zip / login_history.json
+function renderLoginHistory(){
+  const ev=appData.loginHistory;
+  if(!ev||!ev.length)return'';
+  const rows=ev.slice().sort((a,b)=>new Date(b.timestamp||0)-new Date(a.timestamp||0));
+  const loc=l=>{const p=[(l&&l.city)||'',(l&&l.region)||'',(l&&l.country)||''].filter(Boolean);return p.join(' / ')||'—';};
+  const dev=u=>{if(!u)return'—';const b=[u.browser_family,u.browser_version].filter(Boolean).join(' ');
+    const o=[u.os_family,u.os_version].filter(Boolean).join(' ');return[b,o].filter(Boolean).join(' · ')||'—';};
+  return `<div class="section-card"><div class="sc-title">🔐 登录记录（${rows.length}）</div>
+    <div style="overflow-x:auto"><table class="lh-table">
+      <tr><th>时间</th><th>地区</th><th>设备</th><th>方式</th><th>IP</th></tr>
+      ${rows.map(e=>`<tr>
+        <td style="white-space:nowrap">${esc(fmtFull(e.timestamp||''))}</td>
+        <td>${esc(loc(e.location_info))}</td>
+        <td>${esc(dev(e.user_agent))}</td>
+        <td>${esc(e.method||'—')}</td>
+        <td class="lh-ip">${esc(e.ip_address||'—')}</td>
+      </tr>`).join('')}
+    </table></div>
+    <div class="sc-body" style="font-size:11px;color:var(--t3);margin-top:8px">来自导出包 <code>login_history.json</code></div></div>`;
+}
+
+// ── v6.0: CLAUDE 回顾（reflections）─────────────────
+// 数据来自导出包 feedback-000.zip 里的 reflections/{account_uuid}.json，
+// 是 Claude 官方生成的月度回顾——与「统计」页本地算出来的数据性质不同，所以单独一个 Tab。
+let curReflect=0;
+function renderReflect(){
+  staticPanel.style.display='block';detailView.style.display='none';
+  const list=(appData.reflections&&appData.reflections.reflections)||[];
+  if(!list.length){
+    sbScroll.innerHTML='<div class="empty-hint">暂无回顾数据</div>';
+    staticPanel.innerHTML=`<div class="panel-title">🪞 Claude 回顾</div>
+      <div class="section-card"><div class="sc-body">
+      <strong>Claude 回顾</strong>是 Claude 官方按月生成的使用回顾——你把时间花在了哪些主题上、用得最多的能力是什么、有什么值得想一想的地方。<br><br>
+      它在导出包的 <code>feedback-000.zip</code> 里（<code>reflections/{uuid}.json</code>）。旧版单 ZIP 从 2026 年 7 月起也含有这份数据。本次导入未包含。
+      </div></div>`;
+    return;
+  }
+  const ord=list.slice().sort((a,b)=>String(b.period||'').localeCompare(String(a.period||'')));
+  if(curReflect>=ord.length)curReflect=0;
+  sbScroll.innerHTML='';
+  const frag=document.createDocumentFragment();
+  ord.forEach((r,i)=>{
+    const card=document.createElement('div');
+    card.className='s-card'+(i===curReflect?' active':'');
+    card.innerHTML=`<div class="card-name">🪞 ${esc((r.content&&r.content.period)||r.period||'')}</div>`;
+    card.addEventListener('click',()=>{
+      curReflect=i;sbScroll.querySelectorAll('.s-card').forEach(c=>c.classList.remove('active'));
+      card.classList.add('active');renderReflectPanel(ord[i]);
+      mainScreen.classList.add('detail-open');
+    });
+    frag.appendChild(card);
+  });
+  sbScroll.appendChild(frag);
+  renderReflectPanel(ord[curReflect]);
+}
+
+function renderReflectPanel(r){
+  const c=(r&&r.content)||{};
+  const items=(arr,skill)=>(arr||[]).map(it=>`<div class="rf-item">
+    ${skill&&it.skill?`<span class="rf-skill">${esc(it.skill)}</span>`:''}
+    <b>${esc(it.title||'')}</b><p>${esc(it.body||'')}</p></div>`).join('');
+  const stats=(c.stats||[]).map(st=>`<div class="stat-card">
+    <div class="stat-num" style="font-size:22px">${esc(String(st.n||''))}</div>
+    <div class="stat-label">${esc(st.label||'')}${st.sublabel?'<br>'+esc(st.sublabel):''}</div></div>`).join('');
+  const topics=(c.topics||[]).map(t=>{
+    const pc=Math.max(0,Math.min(100,Number(t.percent)||0));
+    return `<div class="rf-topic">
+      <div class="rf-topic-head"><b>${esc(t.title||'')}</b><em>${pc}%</em></div>
+      <div class="rf-track"><div class="rf-fill" style="width:${pc}%"></div></div>
+      ${t.description?`<div class="rf-topic-desc">${esc(t.description)}</div>`:''}</div>`;
+  }).join('');
+  const sec=(title,html)=>html?`<div class="section-card"><div class="sc-title">${title}</div>${html}</div>`:'';
+  staticPanel.innerHTML=`<div class="panel-title">🪞 Claude 回顾</div>
+    <div class="rf-hero">
+      <div class="rf-period">${esc(c.period||r.period||'')}</div>
+      <h2>${esc(c.hero_title||'')}</h2>
+      ${c.hero_body?`<p>${esc(c.hero_body)}</p>`:''}
+    </div>
+    ${stats?`<div class="stat-grid">${stats}</div>`:''}
+    ${sec('📊 主题分布',topics)}
+    ${sec('⏱️ 时间都去哪了',items(c.about_your_time))}
+    ${sec('🚀 在拓展的能力',items(c.expanding_your_skills,true))}
+    ${sec('💡 值得想一想',items(c.worth_thinking_about))}
+    <div class="sc-body" style="font-size:11px;color:var(--t3);padding:0 4px">由 Claude 官方生成，来自导出包 <code>reflections/</code></div>`;
 }
 
 // ── OPEN CONVERSATION ──────────────────────────────────
@@ -1738,7 +2493,10 @@ function isEmptyMsg(m){return!msgText(m).trim()}
 
 let _openCallback=null;
 function openConv(uuid,callback){
-  const raw=appData.convs.find(c=>c.uuid===uuid)||ccConvCache.get(uuid);if(!raw)return;
+  // v6.0: 优先按当前模式取，避免两种模式 uuid 撞车时取到另一边的对话
+  const raw=appMode==='cc'?(ccConvCache.get(uuid)||appData.convs.find(c=>c.uuid===uuid))
+                          :(appData.convs.find(c=>c.uuid===uuid)||ccConvCache.get(uuid));
+  if(!raw)return;
   curConv=raw;_openCallback=callback||null;
   // Linear message list (all messages in chronological order)
   // v5.7: 保留空消息。此前 filter 掉会把"Claude 当时没输出"显示成"消息不存在"，
@@ -1749,7 +2507,9 @@ function openConv(uuid,callback){
   else detailTitle.textContent=_t;
   clearSearch();initVS();showDetail(true);vp.scrollTop=0;
   toggleSrchSidebar(false);updateScrollBtns();buildNavRail();
-  if(_openCallback)setTimeout(()=>{_openCallback();_openCallback=null;},150);
+  // v6.0: 这 150ms 内用户可能已切走，不校验会跳到错误位置
+  if(_openCallback){const cb=_openCallback,c0=curConv;
+    setTimeout(()=>{if(curConv===c0&&_openCallback===cb){cb();_openCallback=null;}},150);}
 }
 
 // ── v5.3: 对话导航条 ───────────────────────────────────
@@ -1879,6 +2639,8 @@ function buildMsg(msg,idx){
   if(!isH)(msg.content||[]).filter(b=>b.type==='thinking').forEach(b=>inner.appendChild(buildThinking(b)));
   // v5.3: 工具 / MCP 调用块（tool_use / tool_result）
   (msg.content||[]).filter(b=>b.type==='tool_use'||b.type==='tool_result').forEach(b=>inner.appendChild(buildToolBlock(b)));
+  // v6.0: 平台注入的系统提示（如开启 Advanced Research），用户没写过，默认折叠
+  (msg.content||[]).filter(b=>b.type==='injected_prompt_block').forEach(b=>inner.appendChild(buildInjected(b)));
   // Text bubble
   let textContent=(msg.content||[]).filter(b=>b.type==='text').map(b=>b.text||'').join('\n').trim()||msg.text||'';
   textContent=replaceUnsupportedBlocks(textContent);
@@ -2043,6 +2805,20 @@ function buildToolBlock(b){
     const o=body.classList.toggle('open');toggle.classList.toggle('open',o);
     reflowMsgHeight(wrap);
   });
+  wrap.appendChild(toggle);wrap.appendChild(body);return wrap;
+}
+
+// v6.0: injected_prompt_block —— 平台注入进消息里的系统提示，复用思考块外观
+function buildInjected(b){
+  const wrap=document.createElement('div');wrap.className='thinking-block';
+  const toggle=document.createElement('div');toggle.className='thinking-toggle';
+  const arrow=document.createElement('span');arrow.className='ti';arrow.textContent='▶';
+  const label=document.createElement('span');label.style.fontWeight='500';label.textContent='系统注入提示';
+  const sumEl=document.createElement('span');sumEl.className='thinking-sum';
+  if(b.injection_source)sumEl.textContent='— '+b.injection_source;
+  toggle.appendChild(arrow);toggle.appendChild(label);toggle.appendChild(sumEl);
+  const body=document.createElement('div');body.className='thinking-body';body.textContent=(b.prompt||'').trim();
+  toggle.addEventListener('click',()=>{const o=body.classList.toggle('open');toggle.classList.toggle('open',o);reflowMsgHeight(wrap);});
   wrap.appendChild(toggle);wrap.appendChild(body);return wrap;
 }
 
@@ -2406,6 +3182,15 @@ function exportMemMd(idx){
 }
 window.exportMemMd=exportMemMd;
 
+// v6.0: 事件委托取代内联 onclick（静态面板每次重绘 innerHTML，逐个绑定不划算；也为后续 CSP 铺路）
+document.addEventListener('click',e=>{
+  const el=e.target.closest&&e.target.closest('[data-open-conv],[data-copy-diag],[data-export-memory]');
+  if(!el)return;
+  if(el.hasAttribute('data-open-conv'))openConvById(el.dataset.openConv);
+  else if(el.hasAttribute('data-copy-diag'))copyDiag();
+  else exportMemMd(Number(el.dataset.exportMemory));
+});
+
 // ══════════════════════════════════════════════════════
 //  v5.6: CLAUDE CODE 本地会话（只读 + 导出 MD）
 // ══════════════════════════════════════════════════════
@@ -2745,7 +3530,7 @@ async function doCCSearch(){
 }
 
 // ── HELPERS ───────────────────────────────────────────
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 function fmtTok(n){n=n||0;if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'k';return String(n);}
 function fmtDate(iso){
   if(!iso)return'';try{const d=new Date(iso);return d.toLocaleDateString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit'});}catch{return iso;}

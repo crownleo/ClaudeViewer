@@ -1,4 +1,4 @@
-# 🗂️ Claude Data Viewer v5.7
+# 🗂️ Claude Data Viewer v6.0
 
 [简体中文](README.md) · **English**
 
@@ -20,9 +20,11 @@ A single-file HTML tool for viewing and analyzing your personal data exported fr
 ### Data Import
 | Method | Notes |
 |---|---|
-| Drop `.zip` | Auto-parses all JSON inside the archive in one step |
+| **Pick / drop the export folder** (new in v6.0) | Claude's new export is a `manifest` plus several `.zip` files — drop the whole folder and it is ingested in one pass, with shard completeness checked against the manifest and missing parts named explicitly |
+| Drop `.zip` | Auto-parses all JSON inside the archive; both the new and legacy formats work, and multiple shard ZIPs can be selected at once |
 | Drop / pick `.json` | Multiple files at once supported |
-| Drop / pick `.md` | Import custom global-memory files |
+| Drop / pick `.md` | Import custom global-memory files (memory files shipped inside the export are now read automatically) |
+| **📚 Archive Library** (new in v6.0) | One archive = the **raw bytes** of one complete export; keep several backups, switch between them, rename, and take the originals back out untouched. Favorites and tags are scoped per archive |
 | Empty-chat handling | Conversations with no messages at all are hidden; conversations whose messages are all empty are collapsed by default and expand in one click (no longer silently dropped since v5.7) |
 | Local persistent cache | Optionally save to the browser to skip re-importing next time |
 
@@ -85,8 +87,9 @@ A single-file HTML tool for viewing and analyzing your personal data exported fr
 | 🔍 Global Search | All conversations | Cross-conversation full-text search |
 | 📊 Statistics | All conversations | Analysis & visualization |
 | 📁 Projects | `projects/*.json` | System prompt, docs, **project memory** |
-| 🧠 Memory | `.md` import | **Global memory** (manual export/import) |
-| 👤 Account | `users.json` | Basic info & stats |
+| 🧠 Memory | `memories/*.json` · `.md` import | **Personal memory** plus the **memory files** shipped inside the export (read automatically since v6.0 — previously ignored) |
+| 🪞 Reflections | `reflections/*.json` | **Claude's official monthly reflection** (new in v6.0) — topic mix, where your time went, skills you're expanding, worth thinking about |
+| 👤 Account | `users.json` · `login_history.json` | Basic info, stats and **login history** (new in v6.0) |
 
 ### Export
 | Feature | Action | Output |
@@ -95,6 +98,8 @@ A single-file HTML tool for viewing and analyzing your personal data exported fr
 | Export current chat as PDF | Detail page "↓ PDF" | New window → print → save as PDF (with formulas) |
 | Batch export all chats | List page "↓ Export All" | `.zip`, one MD file per conversation |
 | Export memory file | Memory tab "↓ Export" | `.md` file |
+| Export a whole archive | Archive library "↓ Export Set" | `.zip`, byte-for-byte faithful to the originals (new in v6.0) |
+| Take out a single original | Archive library "Take out original" | The untouched original file (new in v6.0) |
 
 ### Interface
 | Feature | Notes |
@@ -169,9 +174,26 @@ ClaudeViewer renders the **LaTeX text Claude writes in the message body**:
 
 - **Fully local**: all data is processed only in your browser, never sent to any server
 - **Zero external requests**: since v5.2, marked.js, JSZip, KaTeX and its fonts are all inlined into the single file — opening the page makes no request to any CDN or third party, and it works fully offline
+- **CSP enforcement** (new in v6.0): the page declares `default-src 'none'; connect-src 'none'`, so the **browser itself** guarantees this page cannot reach any server. Even if an external resource were introduced by accident, or a rendering bug were exploited, your conversations could not be sent anywhere. Side effect: Markdown images in conversation text that point at external sites no longer load — which was a tracking and leakage channel to begin with
 - **No persistence by default**: unless you explicitly choose "save locally"
 - **IndexedDB cache**: if you save, data lives in this device's browser, readable only locally, clearable anytime
-- **localStorage**: favorites, tags, dark mode, cache preference, collapse-empty-chats preference (no conversation content)
+- **localStorage**: favorites, tags, dark mode, cache preference, collapse-empty-chats preference, current archive id (no conversation content)
+- **Archive library storage**: files you add to the library are kept as **raw bytes** in a separate IndexedDB on this device (`claude_viewer_archives_v1`), readable only locally and removable per archive at any time
+
+> ### ⚠️ Will "clear browsing data" delete my chats?
+>
+> **Yes.** Clearing browsing data / site data wipes localStorage and IndexedDB, which is where both the local cache and the archive library live. That is browser behaviour and **no web page can prevent it** — it is the flip side of your data being genuinely yours.
+>
+> | Layer | Purpose | After clearing browser data |
+> |---|---|---|
+> | **Original export files on disk / cloud storage** | **The only real backup** | ✅ Unaffected |
+> | Archive library (raw bytes) | Switch between backups, take originals back out | ❌ Gone |
+> | Local cache (parsed result) | Skip re-importing | ❌ Gone |
+>
+> Three practical recommendations:
+> 1. **Keep Claude's original export files on disk or in cloud storage** — don't delete them after importing. The archive library is convenience, not backup;
+> 2. Every archive has **"↓ Export Set"**, which returns the originals to disk byte-for-byte — do this periodically;
+> 3. v6.0 automatically requests **persistent storage** (`navigator.storage.persist()`); once granted, the browser will not evict this site's data under disk pressure. The archive panel shows current usage, quota and whether it was granted. Note this only guards against *automatic* eviction, not a manual clear.
 
 ---
 
@@ -205,14 +227,33 @@ ClaudeViewer renders the **LaTeX text Claude writes in the message body**:
 
 ## 📁 Export Package Files
 
+Claude.ai changed its export format in September 2026: from **one ZIP** to **one manifest JSON plus several category ZIPs**. v6.0 supports both.
+
+### New (sharded export)
+
+The download page hands you a `manifest-….json` listing every download link. Put all downloaded files **into the same folder**, then import it in one go with "📁 Pick export folder".
+
+| ZIP | Inner path | Content |
+|---|---|---|
+| `conversations-000.zip` | `conversations.json` | All conversations (messages, timestamps, thinking, attachments) |
+| `projects-000.zip` | `projects/{uuid}.json` | Project metadata (name, system prompt, docs) |
+| `memories-000.zip` | `memories/{uuid}.json` | Personal memory, project memory, **memory files** |
+| `feedback-000.zip` | `reflections/{uuid}.json` | **Claude's official monthly reflection** |
+| `light_metadata-000.zip` | `users.json`, `login_history.json` | Account info and **login history** |
+
+> ⚠️ With a large history, `conversations` is split into `-000` / `-001` / `-002`. **The manifest is the only way to know whether every shard is present**, so keep it in the folder — nothing else can tell the viewer how many parts there should be. Its download links are **single-use**, so a missing file can only be obtained by exporting again.
+
+### Legacy (single ZIP)
+
 | File | Content |
 |---|---|
-| `conversations.json` | All conversations (messages, timestamps, thinking, attachments) |
+| `conversations.json` | All conversations |
 | `users.json` | Basic account info |
-| `memories.json` | Project memory data (view under the corresponding project in the "Projects" tab) |
-| `projects/{uuid}.json` | Project metadata (name, system prompt, docs) |
+| `memories.json` | Personal memory, project memory, memory files |
+| `projects/{uuid}.json` | Project metadata |
+| `reflections/{uuid}.json` | Claude's monthly reflection (present in exports from July 2026 onward) |
 
-> Personal (global) memory is what Claude remembers about you across conversations. It lives in the export's `memories.json` and shows in the "Memory" tab automatically after importing the ZIP. You can also import your own extra `.md` memory files.
+> Personal (global) memory **and** the memory files both live inside the export and show up in the "Memory" tab automatically — **since v6.0 no manual `.md` import is needed** (importing your own extra files is still supported).
 
 ---
 
@@ -251,21 +292,77 @@ You can also verify by hand: unzip the export, open `conversations.json` in a te
 
 ## 📋 Version History
 
-**v5.7** — **Fixes the "conversation loses half of itself" display bug + data health check.** ① **Empty messages are no longer silently dropped** — messages left empty by a failed generation now render as a grey placeholder; previously the second half of a conversation appeared to lose one side entirely and was mistaken for viewer data loss; ② **Attachment-only messages** (a file uploaded with no text typed) are no longer judged empty and discarded, which previously took the attachment down with them; ③ **All-empty conversations no longer disappear** from the list — collapsed by default to keep the list clean, but the filter bar permanently shows a "🫥 N all-empty conversations hidden" chip that expands them in one click, instead of them silently vanishing; ④ conversation cards gain a `⚠ N` badge showing the empty-message count; ⑤ the Statistics tab gains **🩺 Data Health Check** — empty-message count/share, worst-affected conversations, monthly distribution, and a one-click copy of the report, so anyone can self-diagnose without Python or a command line; ⑥ Markdown / PDF export emit the same placeholder note instead of leaving a bare heading.
+**v6.0** *(2026-09-08)*
 
-**v5.6** — **Claude Code local sessions.** The upload screen gains "📂 Open Claude Code local conversations": pick your `.claude` directory to browse `projects/**/*.jsonl` sessions read-only — ① grouped by project with turn count / tokens / size / time, marking active ● and Agent sessions; ② cross-project full-text search; ③ a normalization adapter reuses the main viewer's thinking/tool collapsing, navigator rail, in-conversation search and MD export (tool calls/results now included in MD export); ④ dual read backends — File System Access API with lazy loading in secure contexts, automatic fallback to a folder picker on `file://`; ⑤ an independent mode alongside Claude.ai exports, switchable from the sidebar without clearing either. Strictly read-only; local files are never modified.
+> The step from "viewer" toward [roadmap](docs/ROADMAP.md) **stage 2: local archiver**. Until now every import was a one-off — close the tab and it was gone; opening a different backup meant starting over. v6.0 introduces the **archive library**: one archive is the **raw bytes** of one complete export, so several backups coexist, switch instantly, and can be taken back out untouched. The viewer stops being something you "open once" and becomes a way to **manage your Claude history over time**.
 
-**v5.5** — **Markdown export fixes + stats charts polish.** ① Export filenames now start with the conversation's creation time (e.g. `2026-05-26_1430_Title.md`) for natural archive sorting; ② Normalized heading hierarchy — message headers are now h2 and headings inside Claude's replies are demoted, so the document outline is no longer scrambled; ③ Attachment code fences grow dynamically so content containing triple backticks no longer breaks the formatting, and truncation is now labelled; ④ The document header gains created/updated time and message-count metadata; ⑤ On the stats page, the monthly bar chart no longer stretches (capped bar width, shrink-only scaling, minimum bar height, hover tooltips), and the activity heatmap gets bigger cells plus month/weekday labels.
+- **Support for Claude's new sharded export** — the export moved from a single ZIP to a `manifest` plus category ZIPs, adding `memories/{uuid}.json`, `reflections/` and `login_history.json`; all supported, and the legacy single ZIP still works unchanged
+- **One-click export-folder import** — pick or drop the whole folder; shard completeness is checked against the manifest and missing files are named explicitly (download links are single-use, so noticing early is what lets you re-export in time); if a folder holds several backups you choose which one to open
+- **📚 Archive library** — keep the raw bytes of several exports; switch, rename, export the whole set, take single originals back out, remove one at a time. Favorites and tags are **scoped per archive**, and the last archive is restored automatically on reopen
+- **Save straight into the library after importing** — the save dialog gains "📚 Add to archive library", so you no longer have to re-pick the same files inside the library; the archive is named from the manifest's export date
+- **Memory files are no longer ignored** — `memory_files` has shipped inside exports since the single-ZIP era but was never read; it now populates the "🧠 Memory" tab automatically, retiring the manual `.md` import step
+- **New "🪞 Reflections" tab** — Claude's official monthly reflection: topic mix, where your time went, skills you're expanding, worth thinking about
+- **Login history on the Account tab** — time / region / device / method
+- **Conversations deduplicated by uuid** — importing in batches, or importing the same export twice, no longer stacks up
+- **CSP hardening** — the page declares `default-src 'none'; connect-src 'none'`, so the browser enforces "zero external requests"; this also closes a tracking and leakage channel: external Markdown images inside conversation text used to be fetched for real
+- **Persistent storage requested** — `navigator.storage.persist()` is called automatically; once granted the browser will not evict this site's data under disk pressure. The archive panel shows usage, quota and grant status
+- Fixes: complete HTML attribute escaping and removal of every inline `onclick` (replaced by event delegation), a save-cache race and its silent failure, an open-conversation callback race, uuid collisions between the two modes; CRC32 verification on ZIP import to catch corrupted downloads
+- Platform-injected system prompts (`injected_prompt_block`) render as a collapsed block instead of being dropped
+- The sidebar header is now two rows, so the title and summary are no longer squeezed into truncation by the icon buttons
+- Added [`CONTRIBUTING.md`](CONTRIBUTING.md) with the four hard product constraints and a verification checklist
 
-**v5.4** — **Mobile support.** On phones the app switches to a single-column master-detail layout: the conversation list is full-width, and opening a conversation / stats / project / memory shows the detail full-width and readable, with a back button to return to the list. Fixes the previous issue where the right detail pane was squeezed into an unreadable sliver on mobile. Desktop's two-column layout is unchanged.
+**v5.7** *(2026-08-05)*
 
-**v5.3** — Three features: ① **Personal memory** — the global personal memory in the export's `memories.json` now shows directly in the "Memory" tab (previously ignored); ② **Tool-call rendering** — `tool_use`/`tool_result` (web search, code analysis, MCP, …) render as collapsible blocks, fixing missing content in tool-using conversations; ③ **Conversation navigator** — a right-edge rail keyed by your questions, hover to expand, click to jump (ChatGPT-style).
+- **Empty messages are no longer silently dropped** — messages left empty by a failed generation render as a grey placeholder; previously the second half of a conversation appeared to lose one side entirely and was mistaken for viewer data loss
+- **Attachment-only messages** (a file uploaded with no text typed) are no longer judged empty and discarded, which previously took the attachment down with them
+- **All-empty conversations no longer disappear** from the list — collapsed by default, with a permanent "🫥 N all-empty conversations hidden" chip that expands them in one click
+- Conversation cards gain a `⚠ N` badge showing the empty-message count
+- New **🩺 Data Health Check** in the Statistics tab — empty-message count/share, worst-affected conversations, monthly distribution, one-click report copy; no Python or command line needed
+- Markdown / PDF export emit the same placeholder note instead of leaving a bare heading
 
-**v5.2** — **Dropped CDN, all dependencies inlined.** marked.js, JSZip, KaTeX and its fonts are bundled into the single file: zero external requests on load, fully offline, and it fixes the slow/failed CDN loads some networks experienced. The project is now licensed under **GPL-3.0**, with author attribution and a copyright notice added to the cover and the running UI.
+**v5.6** *(2026-07-23)*
 
-**v5.1** — Added **one-click copy** (message / thinking / attachment) and **spacing improvements** (no overlapping messages, full thinking display), keeping v5.0's occurrence-level search and local persistence.
+- **Claude Code local sessions** — "📂 Open Claude Code local conversations" on the upload screen; pick your `.claude` directory to browse `projects/**/*.jsonl` read-only
+- Grouped by project with turn count / tokens / size / time, marking active ● and Agent sessions
+- Cross-project full-text search
+- A normalization adapter reuses the main viewer's thinking/tool collapsing, navigator rail, in-conversation search and MD export (tool calls/results now included)
+- Dual read backends — File System Access API with lazy loading in secure contexts, automatic fallback to a folder picker on `file://`
+- An independent mode alongside Claude.ai exports, switchable from the sidebar without clearing either. Strictly read-only
 
-**v5.0** — Stable consolidation release. On top of all v4 features, includes LaTeX rendering, hybrid rendering, occurrence-level search, and friendly notices for unsupported blocks, as a major milestone.
+**v5.5** *(2026-07-10)*
+
+- Export filenames start with the conversation's creation time (e.g. `2026-05-26_1430_title.md`) for natural archival sorting
+- Heading levels normalized on export — message headers become H2 and Claude's own headings are demoted, so the outline stays coherent
+- Attachment code fences lengthen dynamically so runs of backticks no longer break the format; truncation points are labelled
+- Document header gains created/updated times and message count
+- Monthly bar chart no longer stretches out of shape (capped bar width, shrink-only, minimum bar height, hover tooltips)
+- Activity heatmap gains larger cells plus month and weekday labels
+
+**v5.4** *(2026-07-05)*
+
+- **Mobile layout** — a single-column master/detail flow on phones: full-width conversation list, full-width detail after opening a conversation/stats/project/memory, back returns to the list
+- Fixes the previous state where the detail pane was squeezed into a sliver and conversations were unreadable on phones; the desktop two-column layout is unchanged
+
+**v5.3** *(2026-07-04)*
+
+- **Personal memory** — global personal memory from the export's `memories.json` now shows in the "Memory" tab (previously ignored)
+- **Tool call rendering** — `tool_use` / `tool_result` (web search, code analysis, MCP, …) render as collapsed blocks, fixing missing content in conversations that used tools
+- **Conversation navigator rail** — a vertical rail on the right anchored to your questions; hover to expand, click to jump
+
+**v5.2** *(2026-07-01)*
+
+- **CDN dropped, dependencies inlined** — marked.js, JSZip, KaTeX and its fonts are bundled into the single file; the page loads with zero external requests and works fully offline
+- Fixes the previous slow/failing CDN loads on some networks
+- The project is open sourced under **GPL-3.0**, with author attribution and copyright notices on the cover and in the running UI
+
+**v5.1** *(2026-06-28)*
+
+- **One-click copy** — messages / thinking / attachment content
+- **Spacing fixes** — no more overlapping messages, thinking blocks display in full
+
+**v5.0** *(2026-06-27)*
+
+- Stable consolidated release: everything from the v4 series plus LaTeX rendering, hybrid render mode, step-through search matching, and friendly notices for unsupported components
 
 Core capabilities:
 - Viewing: ZIP/JSON/MD import, conversations/projects/memory/account, hybrid rendering, thinking, attachments, code copy, LaTeX
@@ -274,13 +371,21 @@ Core capabilities:
 - Management: favorites, tags, dark mode, IndexedDB persistence
 - Export: single Markdown/PDF (with formulas), batch ZIP of all conversations
 
-> Evolution: v1 conversation viewing & virtual scroll → v2 ZIP import & multi-type data → v3 global search & statistics → v4 search sidebar, heatmap, local persistence, LaTeX, hybrid rendering → v5 stable consolidation → v5.1 one-click copy & spacing → v5.2 drop CDN, inline dependencies → v5.3 personal memory, tool calls, conversation navigator → v5.4 mobile support → v5.5 MD export fixes & stats charts polish → v5.6 Claude Code local sessions → v5.7 empty-message placeholders & data health check.
+> Evolution: v1 conversation viewing & virtual scroll → v2 ZIP import & multi-type data → v3 global search & statistics → v4 search sidebar, heatmap, local persistence, LaTeX, hybrid rendering → v5 stable consolidation → v5.1 one-click copy & spacing → v5.2 drop CDN, inline dependencies → v5.3 personal memory, tool calls, conversation navigator → v5.4 mobile support → v5.5 MD export fixes & stats charts polish → v5.6 Claude Code local sessions → v5.7 empty-message placeholders & data health check → v6.0 sharded-export support, archive library & CSP hardening.
 
 ---
 
 ## 🗺️ Roadmap
 
 Curious about where the project is headed? See the [**Roadmap**](docs/ROADMAP.md), and feel free to share ideas in [Issues](https://github.com/crownleo/ClaudeViewer/issues).
+
+---
+
+## 🙏 Acknowledgements
+
+- [**@LiuHangyuWE**](https://github.com/LiuHangyuWE) — the archive-library design (byte-faithful originals, switching between archives, per-archive favorites and tags, accessible panel handling), several security and race-condition fixes, and the CSP nonce idea all come from [PR #3](https://github.com/crownleo/ClaudeViewer/pull/3). v6.0 rewrote the data model because the export format became sharded, but the direction and much of the code come from that contribution.
+
+Contributions are welcome — please read the [contributing guide](CONTRIBUTING.md) first.
 
 ---
 
@@ -305,4 +410,4 @@ This project is open source under the [GNU GPL-3.0](LICENSE). You are free to us
 
 ---
 
-*Claude Data Viewer v5.7 · Your data, under your control*
+*Claude Data Viewer v6.0 · Your data, under your control*
