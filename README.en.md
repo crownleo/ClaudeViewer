@@ -254,6 +254,33 @@ ClaudeViewer renders the **LaTeX text Claude writes in the message body**:
 
 ---
 
+## 🖥️ Optional: macOS Desktop Companion
+
+**You don't need it.** The web version is the product — double-clicking `claude_viewer.html` gives you everything. The companion just wraps that same web core in a native shell, for Mac users who prefer launching from Applications and keeping their backups as ordinary files.
+
+It changes none of the product's hard rules: **local-first, zero external requests, originals never rewritten**.
+
+**What it gives you**
+
+- Launch straight from the Dock / Applications instead of hunting for the HTML file
+- On import, the exported files are **copied byte-for-byte** into `~/Library/Application Support/ClaudeViewer/Archives/` and read from there
+- Originals and your organizing data (favorites, tags) are **stored separately**; browse, back up, or take the whole set out in Finder
+- Deleting the App **does not take the data with it**. If you stop using it, your archive is still plain ZIP and JSON that any viewer can read
+
+**Status and limits**
+
+| Item | Status |
+|---|---|
+| Source | [`macos/`](macos/) — shell, adapter, build script, tests |
+| How to get it | **Build it yourself**: `python3 macos/build.py --arch arm64` |
+| Tested on | Apple Silicon (arm64) / macOS 26 |
+| Signing | Local ad-hoc signature, **not notarized by Apple** |
+| Intel Mac / Windows | Unverified / none |
+
+The companion follows section 5 of the [contributing guide](CONTRIBUTING.md): it pins the exact `claude_viewer.html` build it was verified against, and **main-repo releases never wait for it**. Lagging behind the main repo is a normal state — see [`macos/README.md`](macos/README.md) for the upstream version it currently targets.
+
+---
+
 ## 📁 Export Package Files
 
 Claude.ai changed its export format in September 2026: from **one ZIP** to **one manifest JSON plus several category ZIPs**. v6.0 supports both.
@@ -413,6 +440,8 @@ Curious about where the project is headed? See the [**Roadmap**](docs/ROADMAP.md
 ## 🙏 Acknowledgements
 
 - [**@LiuHangyuWE**](https://github.com/LiuHangyuWE) — the archive-library design (byte-faithful originals, switching between archives, per-archive favorites and tags, accessible panel handling), several security and race-condition fixes, and the CSP nonce idea all come from [PR #3](https://github.com/crownleo/ClaudeViewer/pull/3). v6.0 rewrote the data model because the export format became sharded, but the direction and much of the code come from that contribution.
+
+  They also contributed the optional [macOS desktop companion](macos/) — AppKit/WebKit shell, injection adapter, build script and tests — built and verified on their own Apple Silicon Mac.
 
 Contributions are welcome — please read the [contributing guide](CONTRIBUTING.md) first.
 

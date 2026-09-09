@@ -255,6 +255,33 @@ ClaudeViewer 渲染的是 Claude **写在正文中的 LaTeX 文本**：
 
 ---
 
+## 🖥️ 可选：macOS 桌面伴侣
+
+**不需要它也能用。** 网页版永远是主角——双击 `claude_viewer.html` 就是完整功能。这个伴侣只是把同一份网页核心包进原生外壳，给习惯从「应用程序」启动、并希望把备份当普通文件长期存放的 Mac 用户。
+
+它的存在不改变任何产品底线：**本地优先、零外部请求、原件不改写**。
+
+**它解决什么**
+
+- 从 Dock / 应用程序直接启动，不必每次去找 HTML 文件
+- 导入时把导出的**原始文件原样复制**到 `~/Library/Application Support/ClaudeViewer/Archives/`，并以那里的原件作为数据源
+- 原件与整理信息（收藏、标签）**分开存放**；可以在 Finder 里直接查看、备份、整套拿走
+- 删掉 App **不会带走**这些资料。将来不用它了，数据仍是普通 ZIP 和 JSON，任何查看器都能读
+
+**现状与边界**
+
+| 项 | 状态 |
+|---|---|
+| 源码位置 | [`macos/`](macos/)（外壳、适配器、构建脚本、测试） |
+| 获取方式 | **自行构建**：`python3 macos/build.py --arch arm64` |
+| 实测环境 | Apple Silicon (arm64) / macOS 26 |
+| 签名 | 本地 ad-hoc 签名，**未经 Apple 公证** |
+| Intel Mac / Windows | 未验证 / 无 |
+
+伴侣按 [贡献指南](CONTRIBUTING.md) 第五节的规则维护：它用版本锁钉住自己实测通过的那一版 `claude_viewer.html`，**主仓发版不等它**。伴侣落后于主仓是正常状态，详见 [`macos/README.md`](macos/README.md) 里当前对应的上游版本。
+
+---
+
 ## 📁 导出包文件说明
 
 Claude.ai 的导出格式在 2026 年 9 月改版：由**一个 ZIP** 变成 **一个 manifest JSON + 多个分类 ZIP**。v6.0 两种都支持。
@@ -408,6 +435,8 @@ v5.6 及更早版本会把这类空消息**静默过滤掉**，于是「Claude �
 ## 🙏 致谢
 
 - [**@LiuHangyuWE**](https://github.com/LiuHangyuWE) — 档案库的设计思路（原始字节保真、多档案切换、收藏标签隔离、面板无障碍处理），以及多项安全与竞态修复、CSP nonce 加固思路，均来自 [PR #3](https://github.com/crownleo/ClaudeViewer/pull/3)。v6.0 因导出格式改为分片而重写了数据模型，但方向与相关代码来自这份贡献。
+
+  另外贡献了可选的 [macOS 桌面伴侣](macos/)（AppKit/WebKit 外壳、注入式适配器、构建脚本与测试），并在自己的 Apple Silicon Mac 上完成构建与实机验证。
 
 欢迎参与——动手前请先看 [贡献指南](CONTRIBUTING.md)。
 
