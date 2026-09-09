@@ -273,10 +273,23 @@ ClaudeViewer 渲染的是 Claude **写在正文中的 LaTeX 文本**：
 | 项 | 状态 |
 |---|---|
 | 源码位置 | [`macos/`](macos/)（外壳、适配器、构建脚本、测试） |
-| 获取方式 | **自行构建**：`python3 macos/build.py --arch arm64` |
+| 获取方式 | **自行构建**（见下） |
 | 实测环境 | Apple Silicon (arm64) / macOS 26 |
 | 签名 | 本地 ad-hoc 签名，**未经 Apple 公证** |
 | Intel Mac / Windows | 未验证 / 无 |
+
+**怎么装:三条命令**
+
+```bash
+xcode-select --install                                    # 1. 装 Apple 命令行开发工具（只需一次）
+git clone https://github.com/crownleo/ClaudeViewer.git    # 2. 拿到代码
+cd ClaudeViewer
+python3 macos/build.py                                    # 3. 构建
+```
+
+完成后 `_release/ClaudeViewer.app` 拖进「应用程序」即可。完整步骤、常见问题见 [`macos/README.md`](macos/README.md#五分钟装好给用户)。
+
+> **自己构建的 App 不会被系统拦下。** 「无法验证开发者」那个提示只针对**从网上下载**的文件；本机构建的产物没有下载标记,双击直接打开,不需要改动任何系统设置。这也是目前推荐自行构建、而不提供下载包的原因——本项目只做本地临时签名,未经 Apple 公证,**那样的 App 一旦经网络分发反而会被拦住**。
 
 伴侣按 [贡献指南](CONTRIBUTING.md) 第五节的规则维护：它用版本锁钉住自己实测通过的那一版 `claude_viewer.html`，**主仓发版不等它**。伴侣落后于主仓是正常状态，详见 [`macos/README.md`](macos/README.md) 里当前对应的上游版本。
 

@@ -27,7 +27,51 @@
 
 如果还要备份收藏和标签，请退出 App 后复制整个 `Archives` 目录。恢复时同样先退出，并保留现有资料的另一份备份，再恢复目录。普通删除 `ClaudeViewer.app` 不会删除资料目录；移除某份档案则会把其原件和整理记录一起送到 macOS 废纸篓。手动放入的资料目录位于 App 资料库内，也属于这个移除范围。
 
-## 自己构建 App
+## 五分钟装好（给用户）
+
+**前提：一台 Mac。不需要懂编程，三条命令。**
+
+**1. 装 Apple 命令行开发工具**（只需装一次；已装过会提示 already installed，属正常）
+
+```bash
+xcode-select --install
+```
+
+**2. 把代码拿到本地**
+
+```bash
+git clone https://github.com/crownleo/ClaudeViewer.git
+cd ClaudeViewer
+```
+
+> 不用 git 也行：在项目主页点 **Code → Download ZIP**，解压后在终端 `cd` 进那个文件夹。
+
+**3. 构建**
+
+```bash
+python3 macos/build.py
+```
+
+完成后 `_release/ClaudeViewer.app` 就是可以用的 App，把它拖进「应用程序」文件夹即可，之后能放进 Dock。
+
+### 自己构建的 App 不会被系统拦下
+
+macOS 那句「无法验证开发者，无法打开」只针对**从网上下载**的文件。你在自己机器上构建出来的 App 没有这个下载标记，**双击直接打开，不会有任何警告，也不需要改动 Gatekeeper、SIP 或任何系统设置**。
+
+这正是目前推荐自行构建、而不是提供下载包的原因：本项目的构建产物只做本地临时签名（ad-hoc），没有 Apple 开发者证书签名，也未经公证——**这样的 App 一旦经由网络分发，反而会被系统拦住**。
+
+### 遇到问题
+
+| 现象 | 原因与处理 |
+|---|---|
+| `xcrun: error: ... requires Xcode` | 第 1 步没装成功，重跑 `xcode-select --install` |
+| `command not found: python3` | macOS 12 起不再预装 Python，从 [python.org](https://www.python.org/downloads/macos/) 装一个 |
+| 提示上游校验值不符 | `claude_viewer.html` 与伴侣锁定的版本不一致，见本文开头「当前锁定的上游版本」 |
+| 输出路径已存在 | 脚本不覆盖已有 App，换一个 `--output` 路径 |
+
+---
+
+## 构建选项（进阶）
 
 构建需要 macOS 12 或更新版本、Python 3.9 或更新版本和 Apple 命令行开发工具。使用系统 AppKit、WebKit、CryptoKit，不安装 npm 包或第三方 Swift、Python 依赖。
 
@@ -56,6 +100,25 @@ Any change to upstream `claude_viewer.html` makes the build fail on the checksum
 An archive represents one complete export. Put one account's manifest and all ZIP parts from one export in one directory, then add that directory. Selecting multiple export directories creates independent archives. Legacy complete ZIPs remain supported as separate archives. Category ZIPs should be imported through their export directory. Detectable account conflicts and incomplete manifests are rejected, but directory grouping is still the user's responsibility.
 
 Original files are copied into `~/Library/Application Support/ClaudeViewer/Archives`, separately from the App. Managed archives store originals and a JSON sidecar in separate locations; existing legacy records retain their IDs and organization state. Export directories placed directly at the library root can also be discovered without moving their originals. Retrieving an archive copies its original files into a fresh directory, preserving names, relative paths, and bytes. To retain favorites and tags as well, quit the App and back up the entire library directory.
+
+### Build it yourself in five minutes
+
+**You need a Mac. You don't need to know how to program — three commands.**
+
+```bash
+xcode-select --install                                    # 1. Apple Command Line Tools (once)
+git clone https://github.com/crownleo/ClaudeViewer.git    # 2. get the code
+cd ClaudeViewer
+python3 macos/build.py                                    # 3. build
+```
+
+`_release/ClaudeViewer.app` is then ready to use — drag it into Applications. (No git? Use **Code → Download ZIP** on the project page and `cd` into the extracted folder.)
+
+**An App you built yourself is not blocked by macOS.** The "cannot verify the developer" dialog only applies to files *downloaded from the internet*. A locally built App carries no download marker: it opens on a double-click, with no warning, and requires no changes to Gatekeeper, SIP, or any other system setting.
+
+That is exactly why building it yourself is the recommended path rather than downloading a prebuilt bundle: this project's build is only ad-hoc signed, with no Apple Developer certificate and no notarization — **such an App would be blocked precisely when distributed over the network**.
+
+### Build options (advanced)
 
 Build on macOS 12 or newer with Python 3.9 or newer and Apple's Command Line Tools using `python3 macos/build.py`. No third-party package installation is required. Use `--arch arm64` or `--arch x86_64` and a fresh `--output` path as needed. Retain your bundle ID across upgrades. The build is locally ad-hoc signed, not notarized, and never requires changes to unrelated system settings.
 

@@ -272,10 +272,23 @@ It changes none of the product's hard rules: **local-first, zero external reques
 | Item | Status |
 |---|---|
 | Source | [`macos/`](macos/) — shell, adapter, build script, tests |
-| How to get it | **Build it yourself**: `python3 macos/build.py --arch arm64` |
+| How to get it | **Build it yourself** (see below) |
 | Tested on | Apple Silicon (arm64) / macOS 26 |
 | Signing | Local ad-hoc signature, **not notarized by Apple** |
 | Intel Mac / Windows | Unverified / none |
+
+**How to install — three commands**
+
+```bash
+xcode-select --install                                    # 1. Apple Command Line Tools (once)
+git clone https://github.com/crownleo/ClaudeViewer.git    # 2. get the code
+cd ClaudeViewer
+python3 macos/build.py                                    # 3. build
+```
+
+Then drag `_release/ClaudeViewer.app` into Applications. Full steps and troubleshooting: [`macos/README.md`](macos/README.md#build-it-yourself-in-five-minutes).
+
+> **An App you built yourself is not blocked by macOS.** The "cannot verify the developer" dialog only applies to files *downloaded from the internet*. A locally built App carries no download marker: it opens on a double-click and needs no system-setting changes. That is why building it yourself is the recommended path rather than a prebuilt download — this project is only ad-hoc signed and not notarized, so **such an App would be blocked precisely when distributed over the network**.
 
 The companion follows section 5 of the [contributing guide](CONTRIBUTING.md): it pins the exact `claude_viewer.html` build it was verified against, and **main-repo releases never wait for it**. Lagging behind the main repo is a normal state — see [`macos/README.md`](macos/README.md) for the upstream version it currently targets.
 
