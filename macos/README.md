@@ -1,6 +1,13 @@
 # ClaudeViewer 的可选 Mac 伴侣
 
-这份 Mac 伴侣使用 crownleo/ClaudeViewer 发布的 v6.0 网页核心。仓库根目录的 `claude_viewer.html` 保持上游原样，仍可直接在浏览器中打开。Mac 构建只在生成的 App 中接入本机档案存储，复用上游的 ZIP 解析、消息显示、搜索和阅读导出功能。Mac 代码目前是独立的本地贡献方案，尚未被上游接收；它不承诺 Windows 支持。
+这份 Mac 伴侣使用 crownleo/ClaudeViewer 发布的 v6.0 网页核心。仓库根目录的 `claude_viewer.html` 保持上游原样，仍可直接在浏览器中打开。Mac 构建只在生成的 App 中接入本机档案存储，复用上游的 ZIP 解析、消息显示、搜索和阅读导出功能。Mac 伴侣已并入主仓 `macos/`，按[贡献指南](../CONTRIBUTING.md)第五节维护：它是**可选附属品**，删掉整个目录网页版照常工作；主仓发版不等它。它不承诺 Windows 支持。
+
+**当前锁定的上游版本**：`claude_viewer.html` @ `ec909e33`（v6.0 + 上传页文案修复）。
+实测环境：Apple Silicon (arm64) / macOS 26 / Python 3.13 / Node 26。
+已验证：三组测试全通过、构建与签名通过、真实分片导出（manifest + 5 个分类 ZIP）导入并逐字节保真。
+**未验证**：Intel Mac、其他 macOS 版本、多分片（`-001` 及以后）导出。
+
+上游 `claude_viewer.html` 一变，构建会因校验值不符立即失败——这是设计如此。重新验证适配接口后再更新 `build.py` 里的 `VIEWER_SHA256`。
 
 ## 一份档案就是一次导出
 
@@ -40,7 +47,11 @@
 
 ## English
 
-This optional Mac companion targets the released crownleo/ClaudeViewer v6.0. The repository's standalone HTML remains identical to upstream. Only the generated App receives a native storage adapter; ZIP parsing, rendering, search, and reading exports reuse the upstream implementation. The Mac companion has not been accepted upstream and does not promise Windows support.
+This optional Mac companion targets the released crownleo/ClaudeViewer v6.0. The repository's standalone HTML remains identical to upstream. Only the generated App receives a native storage adapter; ZIP parsing, rendering, search, and reading exports reuse the upstream implementation. The Mac companion now lives in the main repository under `macos/`, maintained per section 5 of the [contributing guide](../CONTRIBUTING.md): it is an **optional add-on** — delete the directory and the web version still works — and main-repo releases never wait for it. It does not promise Windows support.
+
+**Currently pinned upstream**: `claude_viewer.html` @ `ec909e33` (v6.0 plus the upload-screen copy fix). Verified on Apple Silicon (arm64) / macOS 26 / Python 3.13 / Node 26: all three test suites, build and signing, plus a real sharded export (manifest + 5 category ZIPs) imported with byte-for-byte fidelity. **Not verified**: Intel Macs, other macOS versions, multi-part (`-001` and beyond) exports.
+
+Any change to upstream `claude_viewer.html` makes the build fail on the checksum — by design. Revalidate the adapter, then update `VIEWER_SHA256` in `build.py`.
 
 An archive represents one complete export. Put one account's manifest and all ZIP parts from one export in one directory, then add that directory. Selecting multiple export directories creates independent archives. Legacy complete ZIPs remain supported as separate archives. Category ZIPs should be imported through their export directory. Detectable account conflicts and incomplete manifests are rejected, but directory grouping is still the user's responsibility.
 

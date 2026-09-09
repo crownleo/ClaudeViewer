@@ -20,7 +20,7 @@ import subprocess
 # Compatibility is verified against the released upstream file, not any file
 # that happens to contain similarly named functions. Updating this pin requires
 # rerunning the native and WebKit integration checks.
-VIEWER_SHA256 = "cf82967a1e2d4840b373390bddd2886e414b19101a4e3c57c41b3d04ef34bf7b"
+VIEWER_SHA256 = "ec909e332515635e3a3b4ffcc4d71589936c4e29b2fe7b8df89ea90a4950b735"
 
 
 class ScriptTags(HTMLParser):
