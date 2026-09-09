@@ -1,0 +1,115 @@
+# 可选 macOS 伴侣的构建健康检查。
+#
+# 存在的理由：主仓维护者的主力开发机是 Windows，跑不了 macos/build.py。
+# 没有这个 workflow，改动 claude_viewer.html 是否搞坏了 Mac 伴侣，
+# 要等到有人在 Mac 上手动构建才会发现。
+#
+# 关键设计：版本锁过期【不算失败】。
+# 按 CONTRIBUTING.md 第五节，伴侣落后于主仓是正常状态、不是未修复缺陷；
+# 主仓发版不等伴侣。所以锁过期时本 workflow 只发提示、保持绿色，
+# 但仍会跑那项不依赖锁的结构性检查，告诉你这次漂移是「只改了样式」
+# 还是「真的动了适配器依赖的接缝」。
+
+name: macOS 伴侣
+
+on:
+  push:
+    branches: [main]
+    paths: ['claude_viewer.html', 'macos/**', '.github/workflows/macos-companion.yml']
+  pull_request:
+    paths: ['claude_viewer.html', 'macos/**', '.github/workflows/macos-companion.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: macos-latest      # 公开仓库免费；标准 runner 不限分钟数
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 检查版本锁是否仍指向当前的 claude_viewer.html
+        id: pin
+        run: |
+          actual=$(shasum -a 256 claude_viewer.html | cut -d' ' -f1)
+          pinned=$(sed -n 's/^VIEWER_SHA256 = "\([0-9a-f]\{64\}\)"$/\1/p' macos/build.py)
+          echo "actual=$actual"  >> "$GITHUB_OUTPUT"
+          echo "pinned=$pinned"  >> "$GITHUB_OUTPUT"
+          if [ -z "$pinned" ]; then
+            echo "::error::无法从 macos/build.py 解析出 VIEWER_SHA256"
+            exit 1
+          fi
+          if [ "$actual" = "$pinned" ]; then
+            echo "stale=false" >> "$GITHUB_OUTPUT"
+            echo "✅ 版本锁与当前 claude_viewer.html 一致，执行完整验证"
+          else
+            echo "stale=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Mac 伴侣的版本锁已过期（正常状态，不是缺陷）。伴侣锁定 ${pinned:0:12}…，当前 HTML 为 ${actual:0:12}…。构建与原生测试本次跳过。"
+          fi
+
+      # 不依赖版本锁：直接把上游 HTML 和适配器一起装进 vm 跑。
+      # 锁过期时这一项最有价值——它区分「只改了样式」和「动了适配器依赖的接缝」。
+      - name: 适配器结构兼容性（10 项）
+        id: adapter
+        continue-on-error: ${{ steps.pin.outputs.stale == 'true' }}
+        run: node --test macos/tests/adapter.test.cjs
+
+      - name: 原生存储与构建边界
+        if: steps.pin.outputs.stale == 'false'
+        run: python3 macos/tests/run.py
+
+      - name: 真实 WebKit 集成
+        if: steps.pin.outputs.stale == 'false'
+        run: python3 macos/tests/run_webview.py
+
+      - name: 构建并验签
+        if: steps.pin.outputs.stale == 'false'
+        run: |
+          python3 macos/build.py --arch arm64 --output _release/ClaudeViewer-ci.app
+          codesign --verify --deep --strict _release/ClaudeViewer-ci.app
+          echo "产物大小：$(du -sh _release/ClaudeViewer-ci.app | cut -f1)"
+
+      - name: 汇总
+        if: always()
+        run: |
+          {
+            echo "## macOS 伴侣检查"
+            echo
+            if [ "${{ steps.pin.outputs.stale }}" = "true" ]; then
+              echo "### ⏸️ 版本锁已过期 — 不算失败"
+              echo
+              echo "| | |"
+              echo "|---|---|"
+              echo "| 伴侣锁定 | \`${{ steps.pin.outputs.pinned }}\` |"
+              echo "| 当前 HTML | \`${{ steps.pin.outputs.actual }}\` |"
+              echo
+              echo "按 [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md) 第五节，伴侣落后于主仓是正常状态，主仓发版不等它。"
+              echo "构建与原生测试本次跳过；由 Mac 维护者在方便时重新验证并升锁。"
+              echo
+              if [ "${{ steps.adapter.outcome }}" = "success" ]; then
+                echo "**适配器接缝仍然对得上** — 这次漂移未触及 Mac 伴侣依赖的结构，升锁大概率只需改校验值。"
+              else
+                echo "⚠️ **适配器接缝已对不上** — 这次改动动到了伴侣依赖的结构，升锁前需要先改适配器。"
+              fi
+            else
+              echo "### ✅ 版本锁一致 — 已执行完整验证"
+              echo
+              echo "锁定并实测：\`${{ steps.pin.outputs.actual }}\`"
+              echo
+              echo "- 适配器结构兼容性（10 项）"
+              echo "- 原生存储与构建边界"
+              echo "- 真实 WebKit 集成"
+              echo "- 构建 + \`codesign --verify --deep --strict\`"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
